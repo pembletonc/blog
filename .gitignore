@@ -38,4 +38,4 @@ rsconnect/
 
 #public folder
 
-~/public/*
+public/
