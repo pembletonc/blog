@@ -1,0 +1,278 @@
+---
+title: "Cleaning and Tidying Survey Data"
+author: "Corey Pembleton"
+date: "2018-12-05"
+output: html_document
+categories: ["R", "Tutorial"]
+tags: ["tidyverse", "kableExtra", "data cleaning"]
+thumbnailImagePosition: "left"
+thumbnailImage: "/img/messydata.png"
+---
+
+<script src="/rmarkdown-libs/kePrint/kePrint.js"></script>
+
+
+<div id="working-with-survey-data-processing-for-use-and-visualization" class="section level2">
+<h2>Working with Survey Data: Processing for Use and Visualization</h2>
+<p>Depending on the survey software used, the results exported as excel or .csv can often be fairly messy, and processing that data manually in excel can be time consuming and is prone to copy/paste or other munging errors. Using a real example (questions and stakeholder names changed), I present here one fairly replicable way to process survey data exported from SurveyMonkey. I should note here that I didn’t design this survey, there are several methodological flaws regarding response options and questions themselves, but that conversation is for another day.</p>
+</div>
+<div id="three-challenges-with-survey-data" class="section level2">
+<h2>Three Challenges with Survey Data</h2>
+<pre class="r"><code>survey &lt;- read_excel(&quot;./anon_survey.xlsx&quot;)</code></pre>
+<div id="multiple-header-rows" class="section level4">
+<h4>1. Multiple header rows</h4>
+<p>SurveyMonkey results are exported with two or more header rows. The first row is descriptive, for “parent” main questions, the second for the “child” subquestions, the data required is stored in the latter.</p>
+<p>In addition to Questions, the first 1-10 columns contain descriptive information on the respondent, and other descriptive elements. These descriptive aspects are stored in the first row (along with the parent questions), which <code>read_excel()</code> correctly sets as the header.</p>
+<div class="figure">
+<img src="/img/messy_survey.png" alt="Getting the import right is half the battle" />
+<p class="caption">Getting the import right is half the battle</p>
+</div>
+<p>Because of this structure, <code>name()</code> can’t be set on import, and some manipulation is required. This method, which I’ve taken from <a href="%22https://debruine.github.io/multirow_headers.html%22">Lisa DeBruine</a>, is helpful in that columns don’t have to be manually identified, and is reusable for any survey.</p>
+<pre class="r"><code>new_names &lt;- survey %&gt;% 
+  t() %&gt;% 
+  as_tibble() %&gt;% 
+  mutate(name = paste(V1, sep = &quot;_&quot;)) %&gt;% 
+  pull(name)</code></pre>
+<pre><code>## Warning: `as_tibble.matrix()` requires a matrix with column names or a `.name_repair` argument. Using compatibility `.name_repair`.
+## This warning is displayed once per session.</code></pre>
+<pre class="r"><code>new_names[1:4] &lt;- c(&quot;stakeholder_group&quot;, &quot;gender&quot;, &quot;position&quot;, &quot;sector&quot;)</code></pre>
+<p>Which can now be applied to the survey data, and the first row dropped.</p>
+<pre class="r"><code>names(survey) &lt;- new_names
+survey &lt;- survey[-1,]</code></pre>
+<p>There are duplicate columns names which will cause trouble if you want to analyze right away, but they’ll get dealt with in the next step.</p>
+</div>
+<div id="numeric-and-text-responses-combined" class="section level4">
+<h4>2. Numeric and text responses combined</h4>
+<p>Separating the quantitative response values from the qualitative is a necessary step for future gathering and tallying responses. The qualitative responses vary in length, and sometimes are their own question, or are an addition to a numeric question.</p>
+<p>In this case, the qualitative questions are all the same, there are “Other” categories sometimes used when none of the options are suitable but a response is required. I generally reccommend avoiding these, as the single-value responses like this take longer to analyze and more often than not are closely aligned to one of the options.</p>
+<pre class="r"><code>survey_text &lt;- survey %&gt;% 
+  setNames(make.unique(names(.))) %&gt;%
+  select(stakeholder_group:sector, contains(&quot;Other&quot;))
+
+survey &lt;- survey %&gt;% 
+    setNames(make.unique(names(.))) %&gt;%
+    select(everything(), -contains(&quot;Other&quot;))</code></pre>
+</div>
+<div id="removing-the-non-responsive-respondents" class="section level3">
+<h3>3. Removing the non-responsive respondents</h3>
+<p>Some respondents exported from SurveyMonkey often appear to have dropped the survey, and these respondents have <code>NA</code> values for all responses. Any one of the respondent characteristics can be filtered out to remove these non-respondents.</p>
+<pre class="r"><code>survey &lt;- survey %&gt;% filter(!is.na(gender))</code></pre>
+<p>Now that the data is renamed and cleaned, the tidying and counting can begin!</p>
+<div class="figure">
+<img src="https://media.giphy.com/media/rt62KfHCCpyP6/giphy.gif" />
+
+</div>
+</div>
+</div>
+<div id="tidying-the-dataset-gather-group-tally-spread" class="section level2">
+<h2>Tidying the dataset: gather, group, tally, spread</h2>
+<p>The problem with the way the data is presently structured is that each question “value” has its own column (opposed to being combined in the same “question” variable column), the current ratings (e.g. good or very good) are text values, but we need a count, and there are values where respondents could choose not to answer, giving a <N/A> Value.</p>
+<p>All of these can be sorted out with the following code chunk:</p>
+<pre class="r"><code>survey_counts &lt;-  survey %&gt;% 
+  gather(key = Question, value = Response,
+         &quot;1.1 Refugees have been consulted in the design of AGENCY-funded projects&quot;:&quot;1.4 A gender-sensitive needs assessment, or a gender analysis, was undertaken in the design and implementation of interventions&quot;) %&gt;% 
+  group_by(stakeholder_group, Question, Response) %&gt;% 
+  tally %&gt;% 
+  spread(Response, n, fill = 0) %&gt;% 
+  select(stakeholder_group, Question,`Strongly disagree`, Disagree, `Do not know/ Not applicable`, Agree,
+         `Strongly agree`, no_response = `&lt;NA&gt;`) %&gt;%
+  filter(!is.na(stakeholder_group))</code></pre>
+<p>the weakness of this approach is that the gather questions need to be specified (will need to be changed for every survey), and the variables selected will need to be changed according to each question type. The latter will be experimented with further to see how different question response scales can be analyzed differently.</p>
+<table class="table" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<caption>
+<span id="tab:unnamed-chunk-8">Table 1: </span>All respondent values have now been tallied
+</caption>
+<thead>
+<tr>
+<th style="text-align:left;">
+stakeholder_group
+</th>
+<th style="text-align:left;">
+Question
+</th>
+<th style="text-align:right;">
+Strongly disagree
+</th>
+<th style="text-align:right;">
+Disagree
+</th>
+<th style="text-align:right;">
+Do not know/ Not applicable
+</th>
+<th style="text-align:right;">
+Agree
+</th>
+<th style="text-align:right;">
+Strongly agree
+</th>
+<th style="text-align:right;">
+no_response
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+AGENCY
+</td>
+<td style="text-align:left;">
+1.1 Refugees have…
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+5
+</td>
+<td style="text-align:right;">
+3
+</td>
+<td style="text-align:right;">
+9
+</td>
+<td style="text-align:right;">
+4
+</td>
+<td style="text-align:right;">
+0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+EU Member State
+</td>
+<td style="text-align:left;">
+1.1 Refugees have…
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+5
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+4
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+INGO
+</td>
+<td style="text-align:left;">
+1.1 Refugees have…
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+6
+</td>
+<td style="text-align:right;">
+5
+</td>
+<td style="text-align:right;">
+14
+</td>
+<td style="text-align:right;">
+4
+</td>
+<td style="text-align:right;">
+1
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Local NGO
+</td>
+<td style="text-align:left;">
+1.1 Refugees have…
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+2
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+6
+</td>
+<td style="text-align:right;">
+7
+</td>
+<td style="text-align:right;">
+8
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Other EU
+</td>
+<td style="text-align:left;">
+1.1 Refugees have…
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+2
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+0
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="measuring-proportionate-responses" class="section level2">
+<h2>Measuring Proportionate Responses</h2>
+<p>Counts are helpful, but most of the time what we really want is to know the proportion of their response compared to the overall responses. This is also a helpful step to get out of the way when preparing graphics to display results (as found <a href="http://coreypembleton.netlify.com/dev-eval/nesting-mapping-plotting-survey-results/">here</a>).</p>
+<p>Considering how often I work with surveys, I created a function to determine the proportions. Like above, it requires some minor tweaking on a project-by-project basis, and I hope to improve it in the not-so-distant future.</p>
+<pre class="r"><code>#create a function to determine proportions
+Proportions_Function &lt;- function(tbl){
+  tbl %&gt;% 
+    summarise(`Number of Responses` = sum(`Strongly disagree` + `Disagree`+`Do not know/ Not applicable`+
+                                            `Agree`+`Strongly agree` + no_response, na.rm = TRUE),
+              `Strongly disagree`= sum(`Strongly disagree`/`Number of Responses`, na.rm = TRUE) * 100,
+              `Disagree` = sum(`Disagree` / `Number of Responses`, na.rm = TRUE) * 100,
+              `Do not know/ Not applicable` = sum(`Do not know/ Not applicable` / `Number of Responses`, na.rm = TRUE)* 100,
+              `Agree` = sum(`Agree` / `Number of Responses`, na.rm = TRUE) * 100,
+              `Strongly agree` = sum(`Strongly agree` / `Number of Responses`, na.rm = TRUE) * 100,
+              `no_response` = sum(no_response / `Number of Responses`, na.rm = TRUE) * 100
+    ) %&gt;% 
+    mutate_if(is.numeric, round, digits = 2) %&gt;% 
+    arrange(desc(`Number of Responses`))
+}
+
+stakeholder_proportions &lt;- survey_counts %&gt;% 
+  Proportions_Function() %&gt;% 
+  arrange(Question)</code></pre>
+<pre><code>## `mutate_if()` ignored the following grouping variables:
+## Column `stakeholder_group`</code></pre>
+<p>And with that, we now have two tables, one for stakeholder response proportions, and another for stakeholder responses by counts. In my experience, this workflow can bring on massive time savings, is fairly replicable across survey projects, and lends very well to excel table or graphic exports with anonymized findings for clients.</p>
+<p>To find out how to export these as tabbed or single-page excel documents, check out <a href="http://coreypembleton.netlify.com/r-can-do-that/open-xlsx-create-excel-workbooks/">my other post on that topic</a>, and to learn how to quickly produce graphics for those proportion tables, be sure to check <a href="http://coreypembleton.netlify.com/dev-eval/nesting-mapping-plotting-survey-results/">this</a> <code>purrr::map2()</code> workflow.</p>
+</div>
+<div id="key-lessons-learned" class="section level2">
+<h2>Key lessons learned</h2>
+<p>Creating a set of tables which count the results from surveys can be a straight-forward process. The more I work with this type of data, the more I improve the efficiency of the script itself. learning to add <code>tally</code> without the brackets was a breakthrough, and to change the columns with the same name “Other - please respond” with <code>setNames(make.unique(names(.)))</code> is an unelegant solution I would like to improve with <code>rename_at()</code>, but haven’t figured out as of yet. Lastly, the proportions function needs to become more functional. it’s currently prone to error, and needs to be able to better incorporate changes, for example to account for different sums, unique column names and question types, and generally to be more flexible.</p>
+</div>
