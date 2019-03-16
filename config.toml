@@ -33,7 +33,7 @@ ignoreFiles = ["\\.Rmd$", "\\.Rmarkdown$", "_files$", "_cache$"]
 
 [author]
   name = "Corey Pembleton"
-  bio = "Super bio with markdown support **COOL**"
+  bio = "Learning and using R to solve data challenges big and small"
   job = "Analyst & Consultant"
   location = "Montréal"
   # Your Gravatar email. Overwrite `author.picture` everywhere in the blog
@@ -119,7 +119,7 @@ ignoreFiles = ["\\.Rmd$", "\\.Rmarkdown$", "_files$", "_cache$"]
   # If false it will flat categories.
   hierarchicalCategories = true
 
-  description = "Hugo tranquilpeak theme demo"
+  description = "Learning and using R to solve data challenges big and small"
 
   # Customization
   # Define the behavior of the sidebar
