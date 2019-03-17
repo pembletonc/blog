@@ -52,16 +52,11 @@ survey &lt;- survey[-1,]</code></pre>
 survey &lt;- survey %&gt;% 
     setNames(make.unique(names(.))) %&gt;%
     select(everything(), -contains(&quot;Other&quot;))</code></pre>
-</div>
-<div id="removing-the-non-responsive-respondents" class="section level3">
-<h3>3. Removing the non-responsive respondents</h3>
+<p>###3. Removing the non-responsive respondents</p>
 <p>Some respondents exported from SurveyMonkey often appear to have dropped the survey, and these respondents have <code>NA</code> values for all responses. Any one of the respondent characteristics can be filtered out to remove these non-respondents.</p>
 <pre class="r"><code>survey &lt;- survey %&gt;% filter(!is.na(gender))</code></pre>
 <p>Now that the data is renamed and cleaned, the tidying and counting can begin!</p>
-<div class="figure">
-<img src="https://media.giphy.com/media/rt62KfHCCpyP6/giphy.gif" />
-
-</div>
+<p><img src="https://media.giphy.com/media/rt62KfHCCpyP6/giphy.gif" /></p>
 </div>
 </div>
 <div id="tidying-the-dataset-gather-group-tally-spread" class="section level2">
@@ -267,8 +262,6 @@ Proportions_Function &lt;- function(tbl){
 stakeholder_proportions &lt;- survey_counts %&gt;% 
   Proportions_Function() %&gt;% 
   arrange(Question)</code></pre>
-<pre><code>## `mutate_if()` ignored the following grouping variables:
-## Column `stakeholder_group`</code></pre>
 <p>And with that, we now have two tables, one for stakeholder response proportions, and another for stakeholder responses by counts. In my experience, this workflow can bring on massive time savings, is fairly replicable across survey projects, and lends very well to excel table or graphic exports with anonymized findings for clients.</p>
 <p>To find out how to export these as tabbed or single-page excel documents, check out <a href="http://coreypembleton.netlify.com/r-can-do-that/open-xlsx-create-excel-workbooks/">my other post on that topic</a>, and to learn how to quickly produce graphics for those proportion tables, be sure to check <a href="http://coreypembleton.netlify.com/dev-eval/nesting-mapping-plotting-survey-results/">this</a> <code>purrr::map2()</code> workflow.</p>
 </div>
