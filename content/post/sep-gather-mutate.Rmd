@@ -4,7 +4,7 @@ author: "Corey Pembleton"
 date: "2018-10-21"
 output: html_document
 slug: cleaning-eval-data-pt1
-categories: ["R", "Tutorial"]
+categories: ["R"]
 tags: ["tidyverse", "janitor", "data cleaning"]
 thumbnailImagePosition: "left"
 thumbnailImage: "/img/janitor.png"

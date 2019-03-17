@@ -4,7 +4,7 @@ author: "Corey Pembleton"
 date: '2018-10-13'
 output: html_document
 slug: proportional-grouped-sampling
-categories: ["R", "Tutorial"]
+categories: ["R"]
 tags: ["tidyverse", "statistics", "sampling", "purrr"]
 thumbnailImagePosition: "left"
 thumbnailImage: "/img/purrr.png"

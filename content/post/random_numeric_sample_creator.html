@@ -4,7 +4,7 @@ author: "Corey Pembleton"
 date: '2018-10-13'
 output: html_document
 slug: proportional-grouped-sampling
-categories: ["R", "Tutorial"]
+categories: ["R"]
 tags: ["tidyverse", "statistics", "sampling", "purrr"]
 thumbnailImagePosition: "left"
 thumbnailImage: "/img/purrr.png"
@@ -126,7 +126,8 @@ SSA
 Region
 </th>
 <th style="text-align:right;">
-Final Duration (months)
+Final Duration
+(months)
 </th>
 <th style="text-align:left;">
 Countries
@@ -140,6 +141,57 @@ Original Budget
 </tr>
 </thead>
 <tbody>
+<tr>
+<td style="text-align:left;">
+Asia
+</td>
+<td style="text-align:right;">
+36
+</td>
+<td style="text-align:left;">
+India
+</td>
+<td style="text-align:left;">
+no
+</td>
+<td style="text-align:right;">
+799800
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Asia
+</td>
+<td style="text-align:right;">
+24
+</td>
+<td style="text-align:left;">
+Pakistan
+</td>
+<td style="text-align:left;">
+no
+</td>
+<td style="text-align:right;">
+300000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Asia
+</td>
+<td style="text-align:right;">
+24
+</td>
+<td style="text-align:left;">
+South East Asia
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:right;">
+872000
+</td>
+</tr>
 <tr>
 <td style="text-align:left;">
 Asia
@@ -162,101 +214,50 @@ yes
 Asia
 </td>
 <td style="text-align:right;">
+24
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:right;">
+200000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Asia
+</td>
+<td style="text-align:right;">
+24
+</td>
+<td style="text-align:left;">
+Indonesia
+</td>
+<td style="text-align:left;">
+no
+</td>
+<td style="text-align:right;">
+463000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Asia
+</td>
+<td style="text-align:right;">
 36
 </td>
 <td style="text-align:left;">
-Pakistan
+Bangladesh, India, Sri Lanka, Pakistan
 </td>
 <td style="text-align:left;">
 yes
 </td>
 <td style="text-align:right;">
-650000
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-Asia
-</td>
-<td style="text-align:right;">
-24
-</td>
-<td style="text-align:left;">
-India, Nepal
-</td>
-<td style="text-align:left;">
-yes
-</td>
-<td style="text-align:right;">
-200000
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-Asia
-</td>
-<td style="text-align:right;">
-30
-</td>
-<td style="text-align:left;">
-Indonesia, Timor-Leste, Myanmar
-</td>
-<td style="text-align:left;">
-yes
-</td>
-<td style="text-align:right;">
-660600
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-Asia
-</td>
-<td style="text-align:right;">
-24
-</td>
-<td style="text-align:left;">
-NA
-</td>
-<td style="text-align:left;">
-NA
-</td>
-<td style="text-align:right;">
-239000
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-Asia
-</td>
-<td style="text-align:right;">
-24
-</td>
-<td style="text-align:left;">
-India, Nepal, Pakistan
-</td>
-<td style="text-align:left;">
-yes
-</td>
-<td style="text-align:right;">
-268900
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-Asia
-</td>
-<td style="text-align:right;">
-24
-</td>
-<td style="text-align:left;">
-NA
-</td>
-<td style="text-align:left;">
-NA
-</td>
-<td style="text-align:right;">
-200000
+315800
 </td>
 </tr>
 <tr>
@@ -281,16 +282,16 @@ no
 LAC
 </td>
 <td style="text-align:right;">
-38
+24
 </td>
 <td style="text-align:left;">
-Ecuador
+Mexico, Guatemala
 </td>
 <td style="text-align:left;">
 no
 </td>
 <td style="text-align:right;">
-485962
+397100
 </td>
 </tr>
 <tr>
@@ -301,47 +302,14 @@ LAC
 24
 </td>
 <td style="text-align:left;">
-NA
-</td>
-<td style="text-align:left;">
-NA
-</td>
-<td style="text-align:right;">
-299800
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-LAC
-</td>
-<td style="text-align:right;">
-24
-</td>
-<td style="text-align:left;">
-Colombia
+Chile,
+Uruguay
 </td>
 <td style="text-align:left;">
 no
 </td>
 <td style="text-align:right;">
-650800
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-LAC
-</td>
-<td style="text-align:right;">
-24
-</td>
-<td style="text-align:left;">
-Guatemala, Colombia, Mexico, Peru
-</td>
-<td style="text-align:left;">
-no
-</td>
-<td style="text-align:right;">
-600000
+478700
 </td>
 </tr>
 <tr>
@@ -352,13 +320,30 @@ LAC
 36
 </td>
 <td style="text-align:left;">
-Argentina, Bolivia, Brazil, Colombia, Ecuador, Guatemala, Mexico, Peru
+NA
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:right;">
+638000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+LAC
+</td>
+<td style="text-align:right;">
+12
+</td>
+<td style="text-align:left;">
+Bolivia
 </td>
 <td style="text-align:left;">
 no
 </td>
 <td style="text-align:right;">
-997200
+63700
 </td>
 </tr>
 <tr>
@@ -369,13 +354,13 @@ LAC
 24
 </td>
 <td style="text-align:left;">
-Mexico
+Argentina, Ecuador, Guatemala, Paraguay
 </td>
 <td style="text-align:left;">
 yes
 </td>
 <td style="text-align:right;">
-244400
+250000
 </td>
 </tr>
 <tr>
@@ -400,16 +385,33 @@ yes
 LAC
 </td>
 <td style="text-align:right;">
-24
+36
 </td>
 <td style="text-align:left;">
-México, El Salvador, Guatemala, Honduras, Colombia and Jamaica
+Brazil, Colombia, Mexico, South Africa
 </td>
 <td style="text-align:left;">
-yes
+no
 </td>
 <td style="text-align:right;">
-544800
+601000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+LAC
+</td>
+<td style="text-align:right;">
+36
+</td>
+<td style="text-align:left;">
+Argentina, Bolivia, Ecuador
+</td>
+<td style="text-align:left;">
+no
+</td>
+<td style="text-align:right;">
+619900
 </td>
 </tr>
 <tr>
@@ -434,125 +436,6 @@ no
 SSA
 </td>
 <td style="text-align:right;">
-34
-</td>
-<td style="text-align:left;">
-Senegal
-</td>
-<td style="text-align:left;">
-no
-</td>
-<td style="text-align:right;">
-376900
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-SSA
-</td>
-<td style="text-align:right;">
-36
-</td>
-<td style="text-align:left;">
-Mali, Senegal
-</td>
-<td style="text-align:left;">
-yes
-</td>
-<td style="text-align:right;">
-477400
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-SSA
-</td>
-<td style="text-align:right;">
-30
-</td>
-<td style="text-align:left;">
-Zimbabwe
-</td>
-<td style="text-align:left;">
-no
-</td>
-<td style="text-align:right;">
-355700
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-SSA
-</td>
-<td style="text-align:right;">
-24
-</td>
-<td style="text-align:left;">
-DRC, Somalia
-</td>
-<td style="text-align:left;">
-yes
-</td>
-<td style="text-align:right;">
-500000
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-SSA
-</td>
-<td style="text-align:right;">
-33
-</td>
-<td style="text-align:left;">
-Zimbabwe
-</td>
-<td style="text-align:left;">
-no
-</td>
-<td style="text-align:right;">
-488100
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-SSA
-</td>
-<td style="text-align:right;">
-36
-</td>
-<td style="text-align:left;">
-Cameroon, Ghana, Senegal
-</td>
-<td style="text-align:left;">
-no
-</td>
-<td style="text-align:right;">
-618700
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-SSA
-</td>
-<td style="text-align:right;">
-36
-</td>
-<td style="text-align:left;">
-East Africa
-</td>
-<td style="text-align:left;">
-NA
-</td>
-<td style="text-align:right;">
-622400
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-SSA
-</td>
-<td style="text-align:right;">
 36
 </td>
 <td style="text-align:left;">
@@ -570,50 +453,16 @@ yes
 SSA
 </td>
 <td style="text-align:right;">
-42
+34
 </td>
 <td style="text-align:left;">
-Senegal
-</td>
-<td style="text-align:left;">
-no
-</td>
-<td style="text-align:right;">
-500000
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-SSA
-</td>
-<td style="text-align:right;">
-28
-</td>
-<td style="text-align:left;">
-Mali, Niger
+Burkina Faso, DRC
 </td>
 <td style="text-align:left;">
 yes
 </td>
 <td style="text-align:right;">
-485700
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-SSA
-</td>
-<td style="text-align:right;">
-36
-</td>
-<td style="text-align:left;">
-Cameroon
-</td>
-<td style="text-align:left;">
-yes
-</td>
-<td style="text-align:right;">
-344100
+491600
 </td>
 </tr>
 <tr>
@@ -641,13 +490,166 @@ SSA
 36
 </td>
 <td style="text-align:left;">
-Niger,Togo, Mali
+Côte d’Ivoire, Sénégal
 </td>
 <td style="text-align:left;">
 yes
 </td>
 <td style="text-align:right;">
-1096500
+728100
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SSA
+</td>
+<td style="text-align:right;">
+42
+</td>
+<td style="text-align:left;">
+Kenya, Tanzania
+</td>
+<td style="text-align:left;">
+no
+</td>
+<td style="text-align:right;">
+509600
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SSA
+</td>
+<td style="text-align:right;">
+36
+</td>
+<td style="text-align:left;">
+Senegal, Mauritania
+</td>
+<td style="text-align:left;">
+no
+</td>
+<td style="text-align:right;">
+528700
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SSA
+</td>
+<td style="text-align:right;">
+36
+</td>
+<td style="text-align:left;">
+South Africa, Kenya, Sierra Leone
+</td>
+<td style="text-align:left;">
+no
+</td>
+<td style="text-align:right;">
+900000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SSA
+</td>
+<td style="text-align:right;">
+30
+</td>
+<td style="text-align:left;">
+Cameroon, Ghana, Uganda
+</td>
+<td style="text-align:left;">
+no
+</td>
+<td style="text-align:right;">
+743200
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SSA
+</td>
+<td style="text-align:right;">
+36
+</td>
+<td style="text-align:left;">
+Tunisia
+</td>
+<td style="text-align:left;">
+no
+</td>
+<td style="text-align:right;">
+649200
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SSA
+</td>
+<td style="text-align:right;">
+36
+</td>
+<td style="text-align:left;">
+Uganda
+</td>
+<td style="text-align:left;">
+no
+</td>
+<td style="text-align:right;">
+350500
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SSA
+</td>
+<td style="text-align:right;">
+24
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:left;">
+NA
+</td>
+<td style="text-align:right;">
+700000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SSA
+</td>
+<td style="text-align:right;">
+48
+</td>
+<td style="text-align:left;">
+Kenya
+</td>
+<td style="text-align:left;">
+no
+</td>
+<td style="text-align:right;">
+1998100
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SSA
+</td>
+<td style="text-align:right;">
+34
+</td>
+<td style="text-align:left;">
+Senegal
+</td>
+<td style="text-align:left;">
+no
+</td>
+<td style="text-align:right;">
+376900
 </td>
 </tr>
 </tbody>
