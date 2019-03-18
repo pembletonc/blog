@@ -12,16 +12,16 @@
 # For developpers, if you modify this theme, put your images in `source/images` folder and
 # use grunt task `build` to synchronize assets
 
-baseURL = "/"
+baseURL = "https://data-break.netlify.com/"
 languageCode = "en-us"
 defaultContentLanguage = "en-us"
 title = "Data Break"
 theme = "hugo-tranquilpeak-theme"
-disqusShortname = "https-coreypembleton-netlify-com"
+disqusShortname = "data-break"
 # googleAnalytics = "UA-123-45"
 paginate = 7
 canonifyurls = true
-ignoreFiles = ["\\.Rmd$", "\\.Rmarkdown$", "_files$", "_cache$"]
+ignoreFiles = ["\\.Rmd$", "\\.Rmarkdown$", "_files$", "_cache$", "\\.Rproj$"]
 
 [permalinks]
   post = "/:year/:month/:slug/"
