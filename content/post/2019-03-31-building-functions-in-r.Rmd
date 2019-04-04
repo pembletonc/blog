@@ -7,26 +7,12 @@ categories: ["R", "Tutorial"]
 tags: ["purrr"]
 thumbnailImagePosition: "left"
 thumbnailImage: "/img/purrr.png"
-draft: true
-
 ---
+
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
-library(ggplot2)
 ```
-<style>
-  .col2 {
-    columns: 2 200px;         /* number of columns and width in pixels*/
-    -webkit-columns: 2 200px; /* chrome, safari */
-    -moz-columns: 2 200px;    /* firefox */
-  }
-  .col3 {
-    columns: 3 100px;
-    -webkit-columns: 3 100px;
-    -moz-columns: 3 100px;
-  }
-</style>
-
 
 
 This post covers the fundamental functions and approaches in Charlotte and Hadley Wickham's *Writing functions in R* [datacamp course](https://www.datacamp.com/courses/writing-functions-in-r).  
@@ -40,19 +26,19 @@ The five course sections provide an introduction to writing and using functions 
 5. Robust & stable functions
 
 
-## Writing functions
+## Writing functions: structure and best practice
 
-The Hadley's drill a point down: if you've cut and paste something more than twice - it's time to write a function!  
+The Hadley's drill a point down: if you've copy and pasted something more than twice - it's time to write a function!  
 
 Their recommennded process is this: create all of the parts inside the function outside of it first, than add it to the curly brackets (```function(x){} ```) in a way that makes sense according to the inputs.
 
 ### function names, argument names, argument order  
 
-All of these matter! Give a function a descriptive name, have argument (e.g. what goes into the function's ()) names which make sense, and ensure the argument order is logical. Arugment order should be with data arguments first, and detail arguments second.
+All of these matter! Give a function a descriptive name, have name arguments (e.g. what goes into the function's ()) in a way which makes sense, and ensure the argument order is logical. Argument order should be with data arguments first, and detail arguments second:
 
 ```{r}
 
-mean_ci <- function(x, level = 0.95) {
+mean_ci <- function(x, level = 0.95) { #x = data, level = detail
   se <- sd(x) / sqrt(length(x))
   alpha <- 1 - level
   mean(x) + se * qnorm(c(alpha / 2, 1 - alpha / 2))
@@ -89,21 +75,21 @@ mean_ci <- function(x, level = 0.95) {
 
 ## Functional programming with purrr
 
-Why learn to write functions programmatically? Because in many cases (and pretty much every case I've seen professionally) functions often need to be flexible enough to take multiple arguments to achieve a desired result, or meet multiple needs. 
+Why learn to write functions programmatically? Because in many cases (and pretty much every case I've seen professionally) functions often need to be flexible enough to take multiple arguments to achieve a desired result, and often needs to perform multiple tasks sequentially to give a single desired output.
 
-Functional programming is first introduced by showing how to create a function which takes another function as an argument. So instead of:
-
+Functional programming is first introduced by showing how to create a function which takes another function as an argument. So instead of repeating the same process with a single-function usage:
 
 ```{r}
 
 col_median <- function(df) {
   output <- numeric(length(df))
   for (i in seq_along(df)) {
-    output[[i]] <- median(df[[i]])
+    output[[i]] <- median(df[[i]]) 
   }
   output
 }
 
+#new function with only difference being median() is replaced with mean()
 col_mean <- function(df) {
   output <- numeric(length(df))
   for (i in seq_along(df)) {
@@ -118,7 +104,7 @@ The ```col_summary()``` function below can take a function as an argument instea
 
 
 ```{r}
-col_summary <- function(df, fun) {
+col_summary <- function(df, fun) { #fun can be median or mean
   output <- numeric(ncol(df))
   for (i in seq_along(df)) {
     output[[i]] <- fun(df[[i]])
@@ -134,21 +120,21 @@ What's a better step than writing a function which takes a function as an argume
 
 The map functions in purrr work by "first taking a vector, ```.x```, as the first argument, then return ```.f``` applied to each element of ```.x```". Map functions take additional arugments of ```.f``` with ```...```.
 
-There are some interesting ways of how ```.f``` can be specified within map.
+There are some interesting ways of how ```.f``` can be specified within a mapping function:
 
-Defining an anonymous function within it:
+By defining an anonymous function within the ```map()```:
 
 ```{r}
 map(df, function(x) sum(is.na(x)))
 ```
 
-Or, smoother yet, defining an anonymous function as a formula:
+Or, smoother yet, defining an anonymous function as a formula with the ```~```:
 
 ```{r}
 map(df, ~ sum(is.na(.)))
 ```
 
-This is very useful, and I've used this approach in multiple occasions. In most cases, it has been to run a function over a list of dataframes or vectors:
+This is very useful, and I've used this approach in multiple occasions, especially in nested dataframes, or as this example shows, across a split dataframe:
 
 ```{r}
 #where cyl is mtcars split() by a grouping variable (cyl)
@@ -170,13 +156,6 @@ mtcars %>%
   map(summary) %>%
   map_dbl("r.squared")
 ```
-
-
-
-* ```map()```
-* ```map_*()```
-* ```split()```
-
 
 ## Advanced inputs and outputs
 
@@ -260,7 +239,7 @@ sd <- list(0.1, 1, 0.1)
 pmap(list(mean = mean, n =  n, sd = sd), rnorm)
 ```
 
-and another cool function, which I haven't quite figured out how I would use in a practical setting is ```invoke_map()```, used to run multiple functions and their params at once:
+And another cool function, which I haven't quite figured out how I would use in a practical setting is ```invoke_map()```, used to run multiple functions and their params at once:
 
 ```{r}
 funs <- list("rnorm", "runif", "rexp")
@@ -280,7 +259,7 @@ invoke_map(funs, params, n = 5)
 
 ### Walk functions
 
-The walk family of functions in purrr are designed as map functions for side-effects of functions such as printing outputs, plotting, and saving files to disk. In the very useful example provided, the map + walk2 example allows me to create plots for each grouped variable and apply unique path names to each.
+The walk family of functions in purrr are designed as map functions for extracting the side-effects of functions such as printing outputs, plotting, and saving files to disk. In the very useful example provided, map + walk2 allows me to create plots for each grouped variable and apply unique path names to each:
 
 ```{r}
 plots <- mtcars %>% 
@@ -296,6 +275,19 @@ walk2(paths, plots, ggsave)
 This is massively helpful - I'll be revisiting old approaches where I try to use map2 to extract side effects and replace it with walk / walk2.
 
 #### new(ish) functions learned in this course section:
+
+<style>
+  .col2 {
+    columns: 2 200px;         /* number of columns and width in pixels*/
+    -webkit-columns: 2 200px; /* chrome, safari */
+    -moz-columns: 2 200px;    /* firefox */
+  }
+  .col3 {
+    columns: 3 100px;
+    -webkit-columns: 3 100px;
+    -moz-columns: 3 100px;
+  }
+</style>
 
 <div class="col2"> 
 
@@ -321,7 +313,7 @@ The last course section is all about good housekeeping. Creating functions which
 * Hidden arguments
 
 ### Adding meaningful errors into functions
-```{r, eval=TRUE}
+```{r, eval=FALSE}
 x <- c(NA, NA, NA)
 y <- c( 1, NA, NA, NA)
 
@@ -338,12 +330,20 @@ both_na(x,y)
 ```
 
 
-### Dealing with type-unstable functions
+### Non-Standard Evaluation
 
-This refers to having 
+The tidyverse of packages uses a different set of lookup rules within a function's argument than base R as a means of increasing efficiency in programming. The difference is that functions can call upon variables within the data directly without needing to prefix with a ```dat$``` call. Think ```ggplot``` or ```dplyr::filter```:
+
+```{r}
+ggplot(mpg, aes(displ, cty)) + geom_point() #displ and cty direct variable lookup
+
+filter(mtcars, disp > 400)
+```
 
 
+This is a beauty of the tidyverse, however it can bring on some challenges if there are values with the same name as the inputs of the function in the global environment, or if there are names which are the same in the dataframe input. The solutions suggested in the course is to write a warning in the function to prevent that those don't already exist prior to the function executing - simple enough. 
 
+## Lessons Learned
 
-
+All in all a pretty fun course, it helped me go over a few concepts I was already familiar with, and introduced new topics entirely in functional programming. The next stage is to start regularly using these (especially map + walk functions) in my workflow to master them. 
 

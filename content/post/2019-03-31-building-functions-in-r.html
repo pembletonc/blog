@@ -1,0 +1,263 @@
+---
+title: Functions in R
+author: Corey Pembleton
+date: '2019-03-31'
+slug: building-functions-in-r
+categories: ["R", "Tutorial"]
+tags: ["purrr"]
+thumbnailImagePosition: "left"
+thumbnailImage: "/img/purrr.png"
+---
+
+
+
+<p>This post covers the fundamental functions and approaches in Charlotte and Hadley Wickham’s <em>Writing functions in R</em> <a href="https://www.datacamp.com/courses/writing-functions-in-r">datacamp course</a>.</p>
+<p>The five course sections provide an introduction to writing and using functions in R, loosely summarized as:</p>
+<ol style="list-style-type: decimal">
+<li>List structures, indexing, for loops recap (not covered here)</li>
+<li>Writing functions: structure and best practice</li>
+<li>Functional programming</li>
+<li>Advanced inputs and outputs</li>
+<li>Robust &amp; stable functions</li>
+</ol>
+<div id="writing-functions-structure-and-best-practice" class="section level2">
+<h2>Writing functions: structure and best practice</h2>
+<p>The Hadley’s drill a point down: if you’ve copy and pasted something more than twice - it’s time to write a function!</p>
+<p>Their recommennded process is this: create all of the parts inside the function outside of it first, than add it to the curly brackets (<code>function(x){}</code>) in a way that makes sense according to the inputs.</p>
+<div id="function-names-argument-names-argument-order" class="section level3">
+<h3>function names, argument names, argument order</h3>
+<p>All of these matter! Give a function a descriptive name, have name arguments (e.g. what goes into the function’s ()) in a way which makes sense, and ensure the argument order is logical. Argument order should be with data arguments first, and detail arguments second:</p>
+<pre class="r"><code>mean_ci &lt;- function(x, level = 0.95) { #x = data, level = detail
+  se &lt;- sd(x) / sqrt(length(x))
+  alpha &lt;- 1 - level
+  mean(x) + se * qnorm(c(alpha / 2, 1 - alpha / 2))
+}</code></pre>
+<p>Another best practice is adding return statements to functions to give messages such as warnings or errors to users of the function:</p>
+<pre class="r"><code>mean_ci &lt;- function(x, level = 0.95) {
+  if (length(x) == 0) {
+  warning(&quot;`x` was empty&quot;, call. = FALSE)
+  return(c(-Inf, Inf))
+    
+  } else {
+  se &lt;- sd(x) / sqrt(length(x))
+  alpha &lt;- 1 - level
+  mean(x) + se * qnorm(c(alpha / 2, 1 - alpha / 2))
+  }</code></pre>
+<div id="newish-functions-learned-in-this-course-section" class="section level4">
+<h4>new(ish) functions learned in this course section:</h4>
+<ul>
+<li><code>seq_along()</code></li>
+<li><code>warning()</code></li>
+<li><code>qnorm()</code></li>
+<li><code>return()</code></li>
+<li><code>function()</code></li>
+</ul>
+</div>
+</div>
+</div>
+<div id="functional-programming-with-purrr" class="section level2">
+<h2>Functional programming with purrr</h2>
+<p>Why learn to write functions programmatically? Because in many cases (and pretty much every case I’ve seen professionally) functions often need to be flexible enough to take multiple arguments to achieve a desired result, and often needs to perform multiple tasks sequentially to give a single desired output.</p>
+<p>Functional programming is first introduced by showing how to create a function which takes another function as an argument. So instead of repeating the same process with a single-function usage:</p>
+<pre class="r"><code>col_median &lt;- function(df) {
+  output &lt;- numeric(length(df))
+  for (i in seq_along(df)) {
+    output[[i]] &lt;- median(df[[i]]) 
+  }
+  output
+}
+
+#new function with only difference being median() is replaced with mean()
+col_mean &lt;- function(df) {
+  output &lt;- numeric(length(df))
+  for (i in seq_along(df)) {
+    output[[i]] &lt;- mean(df[[i]])
+  }
+  output
+}</code></pre>
+<p>The <code>col_summary()</code> function below can take a function as an argument instead - think <code>sapply()</code> or <code>lapply()</code>.</p>
+<pre class="r"><code>col_summary &lt;- function(df, fun) { #fun can be median or mean
+  output &lt;- numeric(ncol(df))
+  for (i in seq_along(df)) {
+    output[[i]] &lt;- fun(df[[i]])
+  }
+  output
+}</code></pre>
+<div id="functional-programming-with-purrr-1" class="section level3">
+<h3>functional programming with purrr</h3>
+<p>What’s a better step than writing a function which takes a function as an argument? The <code>map_()</code> family of functions in the purrr package.</p>
+<p>The map functions in purrr work by “first taking a vector, <code>.x</code>, as the first argument, then return <code>.f</code> applied to each element of <code>.x</code>”. Map functions take additional arugments of <code>.f</code> with <code>...</code>.</p>
+<p>There are some interesting ways of how <code>.f</code> can be specified within a mapping function:</p>
+<p>By defining an anonymous function within the <code>map()</code>:</p>
+<pre class="r"><code>map(df, function(x) sum(is.na(x)))</code></pre>
+<p>Or, smoother yet, defining an anonymous function as a formula with the <code>~</code>:</p>
+<pre class="r"><code>map(df, ~ sum(is.na(.)))</code></pre>
+<p>This is very useful, and I’ve used this approach in multiple occasions, especially in nested dataframes, or as this example shows, across a split dataframe:</p>
+<pre class="r"><code>#where cyl is mtcars split() by a grouping variable (cyl)
+
+map(cyl, function(df) lm(mpg ~ wt, data = df))
+
+#which is the same as:
+
+map(cyl, ~ lm(mpg ~ wt, data = .))</code></pre>
+<p>From the top, and extracting one of the variables using a combination of <code>summary()</code> and `<code>map_dbl()</code>:</p>
+<pre class="r"><code>mtcars %&gt;% 
+  split(mtcars$cyl) %&gt;%
+  map(~ lm(mpg ~ wt, data = .)) %&gt;% 
+  map(summary) %&gt;%
+  map_dbl(&quot;r.squared&quot;)</code></pre>
+</div>
+</div>
+<div id="advanced-inputs-and-outputs" class="section level2">
+<h2>Advanced inputs and outputs</h2>
+<p>This chapter goes over some important considerations when it comes to functional programming: how to deal with errors in the map family of functions, and more advanced multiple argument inputs and processing their outputs.</p>
+<div id="safety-first" class="section level4">
+<h4>Safety first</h4>
+<p>It isn’t very glamorous, but what is suggested is creating “safe” functions with <code>purrr::safely()</code>, and extracting the successful instance. For instance, in the following list there is one url that will cause the <code>map()</code> output to fail ( due to asdf not being a url), even for the other two successful strings:</p>
+<pre class="r"><code>urls &lt;- list(&quot;example&quot; = &quot;http://example.org&quot;, &quot;rproj&quot; = &quot;http://www.r-project.org&quot;,
+             &quot;asdf&quot; = &quot;http://asdfasdasdkfjlda&quot;)
+
+purrr::map(urls, readLines)
+
+#Warning message: URL &#39;http://asdfasdasdkfjlda/&#39;: status was &#39;Couldn&#39;t resolve host name&#39;
+#Error: cannot open the connection to &#39;http://asdfasdasdkfjlda&#39;</code></pre>
+<p>Whereas by using <code>purrr::safely()</code>, I can extract the successful cases:</p>
+<pre class="r"><code>safe_readLines &lt;- safely(readLines)
+
+html &lt;- map(urls, safe_readLines)
+res &lt;- transpose(html)[[&quot;result&quot;]]
+errs &lt;- transpose(html)[[&quot;error&quot;]]
+
+# Create a logical vector is_ok
+
+is_ok &lt;- map_lgl(errs, is_null)
+
+# Extract the successful results
+
+res[is_ok]</code></pre>
+</div>
+<div id="functional-programming-with-multiple-arguments" class="section level4">
+<h4>Functional programming with multiple arguments</h4>
+<p>To run <code>x</code> function across <code>y</code> vector, <code>map()</code> can be used here just like <code>lapply()</code>:</p>
+<pre class="r"><code>n &lt;- list(5, 10, 20)
+
+map(n, rnorm)
+
+#[[1]]
+#[1]  0.4907515 -0.4560749  1.2945899 -1.0598452  1.0723190
+#
+#[[2]]
+# [1]  2.34129640 -0.56043998  1.08288931  1.55218967  0.91355529  0.53500625
+# [7]  1.18360627  0.05123708  0.30351433  0.06820386
+#
+#[[3]]
+# [1]  0.02583432 -1.06354413  0.32748503  0.51576915 -0.34135875 -0.42845792
+# [7]  1.44046599 -0.89893656  0.25438159  1.52441570  1.22505382  1.01317309
+#[13]  0.15274974 -0.73192319 -0.60792292 -1.67418024  1.92924421  1.31669983
+#[19]  0.29092385 -1.39645626</code></pre>
+<p>And to specify one or more of the arguments which can be input to <code>rnorm()</code> such as mean or sd, we could do so by specifying these arguments in a list using <code>map2()</code>; following the order of the arguments of the function:</p>
+<pre class="r"><code>n &lt;- list(5, 10, 20)
+
+mu &lt;- list(1, 5, 10)
+
+map2(n, mu, rnorm)</code></pre>
+<p>Functions with two arguments or more can use <code>pmap()</code> by listing the arguments as the first argument in <code>pmap()</code>. Note that it is best practice to have the argument names within the list match those of the function:</p>
+<pre class="r"><code>n &lt;- list(5, 10, 20)
+mean &lt;- list(1, 5, 10)
+sd &lt;- list(0.1, 1, 0.1)
+
+pmap(list(mean = mean, n =  n, sd = sd), rnorm)</code></pre>
+<p>And another cool function, which I haven’t quite figured out how I would use in a practical setting is <code>invoke_map()</code>, used to run multiple functions and their params at once:</p>
+<pre class="r"><code>funs &lt;- list(&quot;rnorm&quot;, &quot;runif&quot;, &quot;rexp&quot;)
+rnorm_params &lt;- list(mean = 10)
+runif_params &lt;- list(min = 0, max = 5)
+rexp_params &lt;- list(rate=5)
+
+params &lt;- list(
+  rnorm_params,
+  runif_params,
+  rexp_params
+)
+
+invoke_map(funs, params, n = 5)</code></pre>
+</div>
+<div id="walk-functions" class="section level3">
+<h3>Walk functions</h3>
+<p>The walk family of functions in purrr are designed as map functions for extracting the side-effects of functions such as printing outputs, plotting, and saving files to disk. In the very useful example provided, map + walk2 allows me to create plots for each grouped variable and apply unique path names to each:</p>
+<pre class="r"><code>plots &lt;- mtcars %&gt;% 
+  split(mtcars$cyl) %&gt;% 
+  map(~ ggplot(., aes(mpg, wt)) + geom_point())
+
+paths &lt;- paste0(names(plots), &quot;.pdf&quot;)
+
+walk2(paths, plots, ggsave)</code></pre>
+<p>This is massively helpful - I’ll be revisiting old approaches where I try to use map2 to extract side effects and replace it with walk / walk2.</p>
+<div id="newish-functions-learned-in-this-course-section-1" class="section level4">
+<h4>new(ish) functions learned in this course section:</h4>
+<style>
+  .col2 {
+    columns: 2 200px;         /* number of columns and width in pixels*/
+    -webkit-columns: 2 200px; /* chrome, safari */
+    -moz-columns: 2 200px;    /* firefox */
+  }
+  .col3 {
+    columns: 3 100px;
+    -webkit-columns: 3 100px;
+    -moz-columns: 3 100px;
+  }
+</style>
+<div class="col2">
+
+
+<ul>
+<li><code>safely()</code></li>
+<li><code>transpose()</code></li>
+<li><code>is_null()</code></li>
+<li><code>readLines()</code></li>
+<li><code>map2()</code></li>
+<li><code>pmap()</code></li>
+<li><code>invoke_map()</code></li>
+<li><code>walk()</code></li>
+<li><code>walk2()</code></li>
+<li><code>pwalk()</code></li>
+</ul>
+</div>
+</div>
+</div>
+<div id="robust-and-stable-functions" class="section level2">
+<h2>Robust and stable functions</h2>
+<p>The last course section is all about good housekeeping. Creating functions which are reliable and avoid three common problems in functional programming:</p>
+<ul>
+<li>Type-unstable functions</li>
+<li>Non-standard evaluation</li>
+<li>Hidden arguments</li>
+</ul>
+<div id="adding-meaningful-errors-into-functions" class="section level3">
+<h3>Adding meaningful errors into functions</h3>
+<pre class="r"><code>x &lt;- c(NA, NA, NA)
+y &lt;- c( 1, NA, NA, NA)
+
+both_na &lt;- function(x, y) {
+  # Replace condition with logical
+  if (length(x) != length(y)) {
+    stop(&quot;x and y must have the same length&quot;, call. = FALSE)
+  }  
+  
+  sum(is.na(x) &amp; is.na(y))
+}
+
+both_na(x,y)</code></pre>
+</div>
+<div id="non-standard-evaluation" class="section level3">
+<h3>Non-Standard Evaluation</h3>
+<p>The tidyverse of packages uses a different set of lookup rules within a function’s argument than base R as a means of increasing efficiency in programming. The difference is that functions can call upon variables within the data directly without needing to prefix with a <code>dat$</code> call. Think <code>ggplot</code> or <code>dplyr::filter</code>:</p>
+<pre class="r"><code>ggplot(mpg, aes(displ, cty)) + geom_point() #displ and cty direct variable lookup
+
+filter(mtcars, disp &gt; 400)</code></pre>
+<p>This is a beauty of the tidyverse, however it can bring on some challenges if there are values with the same name as the inputs of the function in the global environment, or if there are names which are the same in the dataframe input. The solutions suggested in the course is to write a warning in the function to prevent that those don’t already exist prior to the function executing - simple enough.</p>
+</div>
+</div>
+<div id="lessons-learned" class="section level2">
+<h2>Lessons Learned</h2>
+<p>All in all a pretty fun course, it helped me go over a few concepts I was already familiar with, and introduced new topics entirely in functional programming. The next stage is to start regularly using these (especially map + walk functions) in my workflow to master them.</p>
+</div>
