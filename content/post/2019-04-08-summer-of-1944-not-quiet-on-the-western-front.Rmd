@@ -1,0 +1,69 @@
+---
+title: "The Battle of Normandy: Summer of 1944"
+author: "Corey Pembleton"
+output: html_document
+date: "2019-04-08"
+slug: summer-of-1944-not-quiet-on-the-western-front
+categories: ["R", "dataexploration", "history"]
+tags: ["visualisation", "tidyverse"]
+thumbnailImagePosition: "left"
+thumbnailImage: "/img/WWII.jpg"
+coverImage: "/img/WWII.jpg"
+draft: true
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(summarytools)
+```
+A good friend of mine has been working on a very interesting project: mapping Canadian Army's Battle of Normandy in which they've mapped out "20,000 mapped unit positions from Canadian, British, American, Free French, Polish and German armies"; which is going to be the largest georeferenced database of military positions in the world. 
+
+They even made a cool video describing the project:  
+
+<iframe width="850" height="537" src="https://www.youtube.com/embed/hgi7cjnoHuc" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+While they're doing some interesting work on the mapping end (which I'd also like to have a look into), I asked if they had any aspatial data I might want to look into, and he shared a file with me containing the casualties of the Battle of Normandy, the Canadian battle following the storming of Juno Beach:
+
+```{r, cache=TRUE}
+cas <- readxl::read_xlsx(here::here("./content/post/Project44_Casualty-List_v3.xlsx"))
+
+glimpse(cas)
+
+```
+
+The dataset records 4,608 deaths occurring between the 6th of June and the 31st of August, 1944; on the subject, Chruchill infamously notes that raiding the beaches of Normandy was just the beginning. I'd like to explore what that beginning looked like in this post.
+
+> "It is not the end, it is not even the beginning of the end, but it is perhaps the end of the beginning" - Winston Churchill 
+
+## Cleaning and Summary Stats
+
+```{r, eval = TRUE, results='hide'}
+
+cas <- cas %>% 
+  select(age_text, date_of_death, rank, Division, regiment, cemeterymemorial) %>% 
+  mutate(date_of_death = lubridate::dmy(date_of_death ),
+         age = as.numeric(age_text))
+
+```
+
+
+I'm not sure what to look at with this data, but from a historical perspective I think several things are interesting to note: the bloodiest days, the units those men were from, their age, and which cemetary they were buried in.
+
+```{r}
+head(summarytools::freq(cas$date_of_death, order = "freq", style = "rmarkdown"), 5)
+
+```
+
+How about their age by Division?
+
+```{r}
+head(ctable(cas$age, cas$Division, prop = "n", style = "rmarkdown"), method = "render", 15)
+
+```
+
+Unsurprisingly, there is a very young age curve, and some 1,233 ```NA``` values for age, or about a quarter of the dataset.
+
+
+
+![Looking at this image, we see how young the men on the Normandy beaches were](/img/WWII-1.jpeg)
