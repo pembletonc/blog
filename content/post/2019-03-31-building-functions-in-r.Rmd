@@ -1,0 +1,349 @@
+---
+title: Functions in R
+author: Corey Pembleton
+date: '2019-03-31'
+slug: building-functions-in-r
+categories: ["R", "Tutorial"]
+tags: ["purrr"]
+thumbnailImagePosition: "left"
+thumbnailImage: "/img/purrr.png"
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+```
+
+
+This post covers the fundamental functions and approaches in Charlotte and Hadley Wickham's *Writing functions in R* [datacamp course](https://www.datacamp.com/courses/writing-functions-in-r).  
+
+The five course sections provide an introduction to writing and using functions in R, loosely summarized as:
+
+1. List structures, indexing, for loops recap (not covered here)
+2. Writing functions: structure and best practice
+3. Functional programming 
+4. Advanced inputs and outputs
+5. Robust & stable functions
+
+
+## Writing functions: structure and best practice
+
+The Hadley's drill a point down: if you've copy and pasted something more than twice - it's time to write a function!  
+
+Their recommennded process is this: create all of the parts inside the function outside of it first, than add it to the curly brackets (```function(x){} ```) in a way that makes sense according to the inputs.
+
+### function names, argument names, argument order  
+
+All of these matter! Give a function a descriptive name, have name arguments (e.g. what goes into the function's ()) in a way which makes sense, and ensure the argument order is logical. Argument order should be with data arguments first, and detail arguments second:
+
+```{r}
+
+mean_ci <- function(x, level = 0.95) { #x = data, level = detail
+  se <- sd(x) / sqrt(length(x))
+  alpha <- 1 - level
+  mean(x) + se * qnorm(c(alpha / 2, 1 - alpha / 2))
+}
+
+```
+
+
+Another best practice is adding return statements to functions to give messages such as warnings or errors to users of the function:
+
+```{r}
+mean_ci <- function(x, level = 0.95) {
+  if (length(x) == 0) {
+  warning("`x` was empty", call. = FALSE)
+  return(c(-Inf, Inf))
+    
+  } else {
+  se <- sd(x) / sqrt(length(x))
+  alpha <- 1 - level
+  mean(x) + se * qnorm(c(alpha / 2, 1 - alpha / 2))
+  }
+
+```
+
+
+#### new(ish) functions learned in this course section:
+
+* ```seq_along()```
+* ```warning()```
+* ```qnorm()```
+* ```return()```
+* ```function()```
+
+
+## Functional programming with purrr
+
+Why learn to write functions programmatically? Because in many cases (and pretty much every case I've seen professionally) functions often need to be flexible enough to take multiple arguments to achieve a desired result, and often needs to perform multiple tasks sequentially to give a single desired output.
+
+Functional programming is first introduced by showing how to create a function which takes another function as an argument. So instead of repeating the same process with a single-function usage:
+
+```{r}
+
+col_median <- function(df) {
+  output <- numeric(length(df))
+  for (i in seq_along(df)) {
+    output[[i]] <- median(df[[i]]) 
+  }
+  output
+}
+
+#new function with only difference being median() is replaced with mean()
+col_mean <- function(df) {
+  output <- numeric(length(df))
+  for (i in seq_along(df)) {
+    output[[i]] <- mean(df[[i]])
+  }
+  output
+}
+```
+
+
+The ```col_summary()``` function below can take a function as an argument instead - think ```sapply()``` or ```lapply()```.
+
+
+```{r}
+col_summary <- function(df, fun) { #fun can be median or mean
+  output <- numeric(ncol(df))
+  for (i in seq_along(df)) {
+    output[[i]] <- fun(df[[i]])
+  }
+  output
+}
+
+```
+
+### functional programming with purrr 
+
+What's a better step than writing a function which takes a function as an argument? The ```map_()``` family of functions in the purrr package.
+
+The map functions in purrr work by "first taking a vector, ```.x```, as the first argument, then return ```.f``` applied to each element of ```.x```". Map functions take additional arugments of ```.f``` with ```...```.
+
+There are some interesting ways of how ```.f``` can be specified within a mapping function:
+
+By defining an anonymous function within the ```map()```:
+
+```{r}
+map(df, function(x) sum(is.na(x)))
+```
+
+Or, smoother yet, defining an anonymous function as a formula with the ```~```:
+
+```{r}
+map(df, ~ sum(is.na(.)))
+```
+
+This is very useful, and I've used this approach in multiple occasions, especially in nested dataframes, or as this example shows, across a split dataframe:
+
+```{r}
+#where cyl is mtcars split() by a grouping variable (cyl)
+
+map(cyl, function(df) lm(mpg ~ wt, data = df))
+
+#which is the same as:
+
+map(cyl, ~ lm(mpg ~ wt, data = .))
+```
+
+
+From the top, and extracting one of the variables using a combination of ```summary()``` and ```map_dbl()``:
+
+```{r}
+mtcars %>% 
+  split(mtcars$cyl) %>%
+  map(~ lm(mpg ~ wt, data = .)) %>% 
+  map(summary) %>%
+  map_dbl("r.squared")
+```
+
+## Advanced inputs and outputs
+
+This chapter goes over some important considerations when it comes to functional programming: how to deal with errors in the map family of functions, and more advanced multiple argument inputs and processing their outputs.
+
+
+#### Safety first
+It isn't very glamorous, but what is suggested is creating "safe" functions with ```purrr::safely()```, and extracting the successful instance. For instance, in the following list there is one url that will cause the ```map()``` output to fail ( due to asdf not being a url), even for the other two successful strings:
+
+```{r}
+urls <- list("example" = "http://example.org", "rproj" = "http://www.r-project.org",
+             "asdf" = "http://asdfasdasdkfjlda")
+
+purrr::map(urls, readLines)
+
+#Warning message: URL 'http://asdfasdasdkfjlda/': status was 'Couldn't resolve host name'
+#Error: cannot open the connection to 'http://asdfasdasdkfjlda'
+```
+
+
+Whereas by using ```purrr::safely()```, I can extract the successful cases:
+
+```{r}
+safe_readLines <- safely(readLines)
+
+html <- map(urls, safe_readLines)
+res <- transpose(html)[["result"]]
+errs <- transpose(html)[["error"]]
+
+# Create a logical vector is_ok
+
+is_ok <- map_lgl(errs, is_null)
+
+# Extract the successful results
+
+res[is_ok]
+```
+
+
+#### Functional programming with multiple arguments
+
+To run ```x``` function across ```y``` vector, ```map()``` can be used here just like ```lapply()```:
+
+```{r}
+n <- list(5, 10, 20)
+
+map(n, rnorm)
+
+#[[1]]
+#[1]  0.4907515 -0.4560749  1.2945899 -1.0598452  1.0723190
+#
+#[[2]]
+# [1]  2.34129640 -0.56043998  1.08288931  1.55218967  0.91355529  0.53500625
+# [7]  1.18360627  0.05123708  0.30351433  0.06820386
+#
+#[[3]]
+# [1]  0.02583432 -1.06354413  0.32748503  0.51576915 -0.34135875 -0.42845792
+# [7]  1.44046599 -0.89893656  0.25438159  1.52441570  1.22505382  1.01317309
+#[13]  0.15274974 -0.73192319 -0.60792292 -1.67418024  1.92924421  1.31669983
+#[19]  0.29092385 -1.39645626
+
+```
+
+And to specify one or more of the arguments which can be input to ```rnorm()``` such as mean or sd, we could do so by specifying these arguments in a list using ```map2()```; following the order of the arguments of the function:
+
+```{r}
+n <- list(5, 10, 20)
+
+mu <- list(1, 5, 10)
+
+map2(n, mu, rnorm)
+```
+
+Functions with two arguments or more can use ```pmap()``` by listing the arguments as the first argument in ```pmap()```. Note that it is best practice to have the argument names within the list match those of the function:
+
+```{r}
+n <- list(5, 10, 20)
+mean <- list(1, 5, 10)
+sd <- list(0.1, 1, 0.1)
+
+pmap(list(mean = mean, n =  n, sd = sd), rnorm)
+```
+
+And another cool function, which I haven't quite figured out how I would use in a practical setting is ```invoke_map()```, used to run multiple functions and their params at once:
+
+```{r}
+funs <- list("rnorm", "runif", "rexp")
+rnorm_params <- list(mean = 10)
+runif_params <- list(min = 0, max = 5)
+rexp_params <- list(rate=5)
+
+params <- list(
+  rnorm_params,
+  runif_params,
+  rexp_params
+)
+
+invoke_map(funs, params, n = 5)
+
+```
+
+### Walk functions
+
+The walk family of functions in purrr are designed as map functions for extracting the side-effects of functions such as printing outputs, plotting, and saving files to disk. In the very useful example provided, map + walk2 allows me to create plots for each grouped variable and apply unique path names to each:
+
+```{r}
+plots <- mtcars %>% 
+  split(mtcars$cyl) %>% 
+  map(~ ggplot(., aes(mpg, wt)) + geom_point())
+
+paths <- paste0(names(plots), ".pdf")
+
+walk2(paths, plots, ggsave)
+
+```
+
+This is massively helpful - I'll be revisiting old approaches where I try to use map2 to extract side effects and replace it with walk / walk2.
+
+#### new(ish) functions learned in this course section:
+
+<style>
+  .col2 {
+    columns: 2 200px;         /* number of columns and width in pixels*/
+    -webkit-columns: 2 200px; /* chrome, safari */
+    -moz-columns: 2 200px;    /* firefox */
+  }
+  .col3 {
+    columns: 3 100px;
+    -webkit-columns: 3 100px;
+    -moz-columns: 3 100px;
+  }
+</style>
+
+<div class="col2"> 
+
+
+* ```safely()```
+* ```transpose()```
+* ```is_null()```
+* ```readLines()```
+* ```map2()```
+* ```pmap()```
+* ```invoke_map()```
+* ```walk()```
+* ```walk2()```
+* ```pwalk()```
+
+
+## Robust and stable functions
+
+The last course section is all about good housekeeping. Creating functions which are reliable and avoid three common problems in functional programming:  
+
+* Type-unstable functions 
+* Non-standard evaluation
+* Hidden arguments
+
+### Adding meaningful errors into functions
+```{r, eval=FALSE}
+x <- c(NA, NA, NA)
+y <- c( 1, NA, NA, NA)
+
+both_na <- function(x, y) {
+  # Replace condition with logical
+  if (length(x) != length(y)) {
+    stop("x and y must have the same length", call. = FALSE)
+  }  
+  
+  sum(is.na(x) & is.na(y))
+}
+
+both_na(x,y)
+```
+
+
+### Non-Standard Evaluation
+
+The tidyverse of packages uses a different set of lookup rules within a function's argument than base R as a means of increasing efficiency in programming. The difference is that functions can call upon variables within the data directly without needing to prefix with a ```dat$``` call. Think ```ggplot``` or ```dplyr::filter```:
+
+```{r}
+ggplot(mpg, aes(displ, cty)) + geom_point() #displ and cty direct variable lookup
+
+filter(mtcars, disp > 400)
+```
+
+
+This is a beauty of the tidyverse, however it can bring on some challenges if there are values with the same name as the inputs of the function in the global environment, or if there are names which are the same in the dataframe input. The solutions suggested in the course is to write a warning in the function to prevent that those don't already exist prior to the function executing - simple enough. 
+
+## Lessons Learned
+
+All in all a pretty fun course, it helped me go over a few concepts I was already familiar with, and introduced new topics entirely in functional programming. The next stage is to start regularly using these (especially map + walk functions) in my workflow to master them. 
+
