@@ -60,9 +60,15 @@ How about their age by Division?
 ```{r}
 head(ctable(cas$age, cas$Division, prop = "n", style = "rmarkdown"), method = "render", 15)
 
+cas %>% 
+  filter(!is.na(age_text)) %>% 
+  ggplot(aes(x = age_text)) + 
+  geom_bar() +
+  theme_minimal()
+
 ```
 
-Unsurprisingly, there is a very young age curve, and some 1,233 ```NA``` values for age, or about a quarter of the dataset.
+There is a very young age curve, and some 1,233 ```NA``` values for age, or about a quarter of the dataset.
 
 
 

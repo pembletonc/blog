@@ -1,0 +1,10 @@
+---
+title: "Automated API -> SQL -> Gmailr workflow"
+author: "Corey Pembleton"
+date: '2019-04-09'
+slug: automated-api-sql-gmailr-workflow
+categories: ["R"]
+tags: ["gmailr", "tidyverse", "limesurvey", "mysql", "scheduleR"]
+draft: true
+---
+
