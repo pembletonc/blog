@@ -1,25 +1,51 @@
 library(tidyverse)
 
 cas1 <- read_excel("./content/post/Project44_Casualty-List_v3.xlsx")
-
-cas1 <- cas1 %>% mutate(date_of_death = dmy(date_of_death),
-                        Division = as_factor(Division),
-                        unitshipsquadron = as_factor(unitshipsquadron))
+cas <- cas %>% 
+  select(age_text, date_of_death, rank, Division, regiment, cemeterymemorial) %>% 
+  mutate(date_of_death = lubridate::dmy(date_of_death ),
+         age = as.numeric(age_text))
 
 cas1 <- cas1 %>% select(age_text, date_of_death, rank, Division, regiment, cemeterymemorial)
 
-#geom_tile
+#start by cleaning the data
 
-cas1 %>% group_by(age_text) %>% count 
+cas$regiment
 
-cas1 %>% 
-  filter(!is.na(age_text)) %>% 
-  ggplot(aes(x = age_text)) + 
-  geom_bar() +
-  theme_minimal()
+cas <- cas %>% 
+  group_by(regiment, date_of_death) %>%
+  summarise(count = n()) %>% 
+  ungroup() %>% 
+  group_by(regiment) %>% 
+  mutate(rolling_cas_count = cumsum(count)) %>% 
+  top_n(10, wt = rolling_cas_count) %>% 
+  arrange(desc(rolling_cas_count)) %>% 
+  mutate(First_Date = "1944-06-22",
+         ordering = as.double(rev(seq(10:1))) * 1.0,
+         week_number = )
 
-cas1 %>% 
-  ggplot(aes(x))
+#df <- tibble(Date = seq(as.Date("1944/06/1"), as.Date("1944/09/1"), "days"))
+
+
+for (i in 1976:2019) {
+  for (j in 1:4) {
+    tmp_df <- grand_slams_clean %>% 
+      filter(year < i | (year==i & tournament_order <= j)) %>% 
+      group_by(name) %>% 
+      filter(rolling_win_count==max(rolling_win_count)) %>% 
+      ungroup() %>% 
+      top_n(10, wt=rolling_win_count) %>%
+      select(name, gender, rolling_win_count) %>%
+      arrange(desc(rolling_win_count)) %>%
+      slice(1:10) %>% 
+      mutate(curr_year = i,
+             tournament_num = j,
+             ordering = as.double(rev(seq(10:1))) * 1.0) 
+    
+    init_df <- init_df %>%
+      bind_rows(tmp_df)
+  }
+}
 
 
 #####gganimate

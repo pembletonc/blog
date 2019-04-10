@@ -16,6 +16,15 @@ knitr::opts_chunk$set(echo = TRUE)
 
 library(tidyverse)
 library(summarytools)
+
+st_options(bootstrap.css     = FALSE,       # Already part of the theme so no need for it
+           plain.ascii       = FALSE,       # One of the essential settings
+           style             = "rmarkdown", # Idem.
+           dfSummary.silent  = TRUE,        # Suppresses messages about temporary files
+           footnote          = NA,          # Keeping the results minimalistic
+           subtitle.emphasis = FALSE)       # For the vignette theme, this gives
+                                            # much better results. Your mileage may vary.
+
 ```
 A good friend of mine has been working on a very interesting project: mapping Canadian Army's Battle of Normandy in which they've mapped out "20,000 mapped unit positions from Canadian, British, American, Free French, Polish and German armies"; which is going to be the largest georeferenced database of military positions in the world. 
 
@@ -48,28 +57,43 @@ cas <- cas %>%
 ```
 
 
-I'm not sure what to look at with this data, but from a historical perspective I think several things are interesting to note: the bloodiest days, the units those men were from, their age, and which cemetary they were buried in.
+I'm not sure what to look at with this data, but I think to gain a better understanding of what this data can show, several variables are interesting to note: the bloodiest days, the units those men were from, their age, and which cemetary they were buried in.
 
+#### Bloodiest days:
 ```{r}
 head(summarytools::freq(cas$date_of_death, order = "freq", style = "rmarkdown"), 5)
-
 ```
 
-How about their age by Division?
-
+#### Age
 ```{r}
-head(ctable(cas$age, cas$Division, prop = "n", style = "rmarkdown"), method = "render", 15)
+ctable(cas$age, cas$Division, prop = "n", style = "rmarkdown", method = "render", 15, useNA = "no", totals = TRUE)
 
 cas %>% 
   filter(!is.na(age_text)) %>% 
-  ggplot(aes(x = age_text)) + 
+  ggplot(aes(x = age_text)) +
   geom_bar() +
+  ylab("") + 
+  xlab("Age") +
   theme_minimal()
 
 ```
 
-There is a very young age curve, and some 1,233 ```NA``` values for age, or about a quarter of the dataset.
+Exploring the data also shows that there are 1,233 ```NA``` values for age, or about a quarter of the dataset.
+
+#### Cemetery
+
+```{r}
+cas %>% 
+  group_by(cemeterymemorial) %>% 
+  count %>% arrange(desc(n)) %>%
+  filter(n > 10) %>% 
+  kableExtra::kable() %>% 
+  kableExtra::kable_styling(full_width = FALSE, bootstrap_options = "hover")
+```
+
+### Visualizing the data
 
 
 
-![Looking at this image, we see how young the men on the Normandy beaches were](/img/WWII-1.jpeg)
+
+![Looking at this image from the Canadian archives, we see how young the men on the Normandy beaches were](/img/WWII-1.jpeg)
