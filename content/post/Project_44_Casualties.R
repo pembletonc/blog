@@ -1,126 +1,168 @@
 library(tidyverse)
+library(readxl)
+library(lubridate)
 
-cas1 <- read_excel("./content/post/Project44_Casualty-List_v3.xlsx")
-cas <- cas %>% 
+cas <- read_excel("./content/post/Project44_Casualty-List_v3.xlsx")
+
+cas_clean <- cas %>% 
   select(age_text, date_of_death, rank, Division, regiment, cemeterymemorial) %>% 
-  mutate(date_of_death = lubridate::dmy(date_of_death ),
-         age = as.numeric(age_text))
-
-cas1 <- cas1 %>% select(age_text, date_of_death, rank, Division, regiment, cemeterymemorial)
+  mutate(date_of_death = as.Date(dmy(date_of_death )),
+         age = as.numeric(age_text)) %>% 
+  group_by(regiment, date_of_death) %>%
+  tally %>% 
+  mutate(cumulative_deaths = cumsum(n)) %>% 
+  ungroup()
 
 #start by cleaning the data
 
-cas$regiment
-
-cas <- cas %>% 
-  group_by(regiment, date_of_death) %>%
-  summarise(count = n()) %>% 
+cas_init <- cas_clean %>% 
+  group_by(regiment) %>%
+  filter(cumulative_deaths == max(cumulative_deaths)) %>% 
   ungroup() %>% 
-  group_by(regiment) %>% 
-  mutate(rolling_cas_count = cumsum(count)) %>% 
-  top_n(10, wt = rolling_cas_count) %>% 
-  arrange(desc(rolling_cas_count)) %>% 
-  mutate(First_Date = "1944-06-22",
-         ordering = as.double(rev(seq(10:1))) * 1.0,
-         week_number = )
-
-#df <- tibble(Date = seq(as.Date("1944/06/1"), as.Date("1944/09/1"), "days"))
-
-
-for (i in 1976:2019) {
-  for (j in 1:4) {
-    tmp_df <- grand_slams_clean %>% 
-      filter(year < i | (year==i & tournament_order <= j)) %>% 
-      group_by(name) %>% 
-      filter(rolling_win_count==max(rolling_win_count)) %>% 
-      ungroup() %>% 
-      top_n(10, wt=rolling_win_count) %>%
-      select(name, gender, rolling_win_count) %>%
-      arrange(desc(rolling_win_count)) %>%
-      slice(1:10) %>% 
-      mutate(curr_year = i,
-             tournament_num = j,
-             ordering = as.double(rev(seq(10:1))) * 1.0) 
-    
-    init_df <- init_df %>%
-      bind_rows(tmp_df)
-  }
-}
-
-
-#####gganimate
-
-library(tidyverse); library(gganimate)
-
-grand_slams <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-04-09/grand_slams.csv")
-
-
-#create variable for tournament order, shorten goolagong's name for labeling ease
-grand_slams_clean <- grand_slams %>% 
-  mutate(tournament_order = case_when(grand_slam=='australian_open' ~ 1,
-                                      grand_slam=='french_open' ~ 2,
-                                      grand_slam=='wimbledon' ~ 3,
-                                      grand_slam=='us_open' ~ 4),
-         name = ifelse(name == 'Evonne Goolagong Cawley', 'Evonne Goolagong', name)) %>% 
-  arrange(tournament_date)
-
-
-init_df <- grand_slams_clean %>% 
-  filter(year <= 1975) %>%
-  group_by(name) %>% 
-  filter(rolling_win_count==max(rolling_win_count)) %>% 
-  ungroup() %>% 
-  top_n(10, wt=rolling_win_count) %>% 
-  arrange(desc(rolling_win_count)) %>% 
-  select(name,gender, rolling_win_count) %>% 
-  mutate(curr_year = 1975,
+  top_n(10, wt = cumulative_deaths) %>% 
+  arrange(desc(cumulative_deaths)) %>% 
+  select(regiment, cumulative_deaths) %>% 
+  mutate(curr_day = ymd("1944-06-06"),
          ordering = as.double(rev(seq(10:1))) * 1.0)
 
+nrow(unique(cas_clean[,2]))
+
+for (i in 1:nrow(unique(cas_clean[,2]))) {
+  
+  tmp_df <- cas_clean %>% 
+    #filter data to current point in time
+    filter(date_of_death < i | date_of_death==i) %>% 
+    group_by(regiment) %>% 
+    filter(cumulative_deaths==max(cumulative_deaths)) %>% 
+    ungroup() %>% 
+    top_n(10, wt = cumulative_deaths) %>% 
+    select(regiment, cumulative_deaths) %>% 
+    arrange(desc(cumulative_deaths)) %>% 
+    slice(1:10) %>% 
+    mutate(curr_day = ymd(i),
+           ordering = as.double(rev(seq(10:1))) * 1.0)
+
+cas_init <- cas_init %>% bind_rows(tmp_df)
+}
+
+View(cas_init)
+#outer loop gets year
 for (i in 1976:2019) {
+  #inner loop gets tournament
   for (j in 1:4) {
     tmp_df <- grand_slams_clean %>% 
+      #filter data up to correct point in time
       filter(year < i | (year==i & tournament_order <= j)) %>% 
+      #get each players max win count
       group_by(name) %>% 
       filter(rolling_win_count==max(rolling_win_count)) %>% 
       ungroup() %>% 
       top_n(10, wt=rolling_win_count) %>%
       select(name, gender, rolling_win_count) %>%
       arrange(desc(rolling_win_count)) %>%
-      slice(1:10) %>% 
+      slice(1:10) %>%
+      #add var for curr_year, ordering for easy bar chart (reverse it cuz we're gonna do horiz)
       mutate(curr_year = i,
              tournament_num = j,
              ordering = as.double(rev(seq(10:1))) * 1.0) 
-    
     init_df <- init_df %>%
       bind_rows(tmp_df)
   }
 }
+
+
 
 #add group ids to use as transition states in gganimate
 final_df <- init_df %>% 
   group_by(curr_year, tournament_num) %>% 
-  mutate(num = group_indices()) %>% 
+  mutate(frame_id = group_indices()) %>% 
+  ungroup()
+
+
+
+
+#days <- tibble(Date = seq(as.Date("1944/06/1"), as.Date("1944/09/1"), "days"))
+
+#cas_final <- left_join(days, cas_final, by = c("Date" = "date_of_death"))
+
+
+
+
+#create variable for tournament order, shorten goolagong's name for labeling ease
+grand_slams_clean <- grand_slams %>%
+  mutate(tournament_order = case_when(grand_slam=='australian_open' ~ 1,
+                                      grand_slam=='french_open' ~ 2,
+                                      grand_slam=='wimbledon' ~ 3,
+                                      grand_slam=='us_open' ~ 4),
+         name = ifelse(name == 'Evonne Goolagong Cawley', 'Evonne Goolagong', name)) %>%
+  arrange(tournament_date)
+
+#get data from 1968-1975, helps avoid ties, incomplete bar chart at beginning
+#basically just making this more visually appealling
+init_df <- grand_slams_clean %>%
+  filter(year <= 1975) %>%
+  group_by(name) %>%
+  filter(rolling_win_count==max(rolling_win_count)) %>%
+  ungroup() %>%
+  top_n(10, wt=rolling_win_count) %>%
+  arrange(desc(rolling_win_count)) %>%
+  select(name,gender, rolling_win_count) %>%
+  mutate(curr_year = 1975,
+         ordering = as.double(rev(seq(10:1))) * 1.0)
+
+#outer loop gets year
+for (i in 1976:2019) {
+  #inner loop gets tournament
+  for (j in 1:4) {
+    tmp_df <- grand_slams_clean %>% 
+      #filter data up to correct point in time
+      filter(year < i | (year==i & tournament_order <= j)) %>% 
+      #get each players max win count
+      group_by(name) %>% 
+      filter(rolling_win_count==max(rolling_win_count)) %>% 
+      ungroup() %>% 
+      top_n(10, wt=rolling_win_count) %>%
+      select(name, gender, rolling_win_count) %>%
+      arrange(desc(rolling_win_count)) %>%
+      slice(1:10) %>%
+      #add var for curr_year, ordering for easy bar chart (reverse it cuz we're gonna do horiz)
+      mutate(curr_year = i,
+             tournament_num = j,
+             ordering = as.double(rev(seq(10:1))) * 1.0) 
+    init_df <- init_df %>%
+      bind_rows(tmp_df)
+  }
+}
+
+View(init_df)
+
+
+#add group ids to use as transition states in gganimate
+final_df <- init_df %>% 
+  group_by(curr_year, tournament_num) %>% 
+  mutate(frame_id = group_indices()) %>% 
   ungroup()
 
 
 #set font, theme
 my_font <- 'Quicksand'
 my_background <- 'antiquewhite'
-my_theme <- my_theme <- theme(text = element_text(family = my_font),
-                              rect = element_rect(fill = my_background),
-                              plot.background = element_rect(fill = my_background, color = NA),
-                              panel.background = element_rect(fill = my_background, color = NA),
-                              panel.border = element_blank(),
-                              plot.title = element_text(face = 'bold', size = 20),
-                              plot.subtitle = element_text(size = 14),
-                              panel.grid.major.y = element_blank(),
-                              panel.grid.minor.y = element_blank(),
-                              panel.grid.major.x = element_line(color = 'grey75'),
-                              panel.grid.minor.x = element_line(color = 'grey75'),
-                              legend.position = 'none',
-                              plot.caption = element_text(size = 8),
-                              axis.ticks = element_blank(),
-                              axis.text.y =  element_blank())
+my_pal <- c('#F8AFA8','#74A089')
+my_theme <- theme(text = element_text(family = my_font),
+                  rect = element_rect(fill = my_background),
+                  plot.background = element_rect(fill = my_background, color = NA),
+                  panel.background = element_rect(fill = my_background, color = NA),
+                  panel.border = element_blank(),
+                  plot.title = element_text(face = 'bold', size = 20),
+                  plot.subtitle = element_text(size = 14),
+                  panel.grid.major.y = element_blank(),
+                  panel.grid.minor.y = element_blank(),
+                  panel.grid.major.x = element_line(color = 'grey75'),
+                  panel.grid.minor.x = element_line(color = 'grey75'),
+                  legend.position = 'none',
+                  plot.caption = element_text(size = 8),
+                  axis.ticks = element_blank(),
+                  axis.text.y =  element_blank())
 
 theme_set(theme_light() + my_theme)
 
@@ -129,7 +171,7 @@ barplot_race <- ggplot(aes(ordering, group = name), data = final_df) +
   geom_tile(aes(y = rolling_win_count / 2, 
                 height = rolling_win_count,
                 width = 0.9, fill=gender), alpha = 0.9) +
-  scale_fill_manual(values = c('#F8AFA8','#74A089')) +
+  scale_fill_manual(values = my_pal) +
   geom_text(aes(y = rolling_win_count, label = name), family=my_font, nudge_y = -2, size = 3) +
   geom_text(aes(y = rolling_win_count, label = as.character(rolling_win_count)), family=my_font, nudge_y = 0.5) +
   geom_text(aes(x=1,y=18.75, label=paste0(curr_year)), family=my_font, size=8, color = 'gray45') +
@@ -140,12 +182,13 @@ barplot_race <- ggplot(aes(ordering, group = name), data = final_df) +
        caption = 'data source: Wikipedia | plot by @emilykuehler',
        x = '',
        y = '') +
-  transition_states(num, 
+  transition_states(frame_id, 
                     transition_length = 4, state_length = 3) +
   ease_aes('cubic-in-out')
 
-animate(barplot_race, nframes = 1000, fps = 30, width = 600, height = 400, res=80, detail = 3)
+animate(barplot_race, nframes = 1000, fps = 30, width = 400, height = 266, res=80, detail = 3)
 
 anim_save("barplot_race.gif")
+
 
 
