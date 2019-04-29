@@ -1,0 +1,95 @@
+---
+title: "MAPS Crowdsourced Open Science Project: Data Exploration"
+author: "Corey Pembleton"
+date: '2019-04-27'
+output: html_document
+slug: crowdsourced-open-science-project-data-exploration
+categories: [ "R", "dataexploration"]
+tags: ["data cleaning", "statistics", "naniar"]
+thumbnailImagePosition: "left"
+draft: true 
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+suppressWarnings(suppressPackageStartupMessages(library(tidyverse)))
+library(kableExtra)
+```
+
+In my previous post I explain the goals of this research project, and now that I have access to the data, it's time to dig in and have a look at the data used for the analysis, how gaps in the data were imputed, and what other approaches could be used.
+
+### Synthetic data imputations
+
+One of the contributors of the MAPS study, [Robert Arbon](https://twitter.com/BertieArbon), created synthesized versions of the ALSPAC dataset using the R ```SynthPop``` package to account for the large amounts of missing data (only 12.7% of participants had complete data on outcomes, exposure, and covariates). They describe the method as being similar to the Multiple Imputation by Chained Equations (MICE) method (described in detail [here](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3074241/)), testing variables and other robustness tests in the imputated data. 
+
+## Missing Data
+
+The flow of how the authors arrived at only 12.7% of participants having completed the required outcomes/exposures/covariates looks like this:
+
+![](/img/data-flow.png)
+
+In this post, I would like to explore the missing data further to gain an understanding of the data used for the study, how it was imputated, and what implications this could have on future analytic stages.
+
+#### Libraries Used
+
+I will be using ```naniar```, ```SynthPop``` and ```simputation``` along with the usual ```tidyverse``` suspects.
+
+```{r, cache=TRUE, error=FALSE, warning=FALSE, message=FALSE}
+orig_dat <- read_csv("https://raw.githubusercontent.com/pembletonc/OpenNorth_MAPS/master/maps-synthetic-data.csv") %>% rename(ID = X1)
+
+dat <- orig_dat %>% select(ID, sex, 
+                     Secondary_Depression_Diagnosis_17.5 = secd_diag,
+                     Primary_Depression_Diagnosis_17.5 = prim_diag,
+                     ICD_Depression_Diagnosis_17.5 = has_dep_diag,
+                     Depression_Score_17.5 = dep_score,
+                     Depression_Band_15.5 = dep_band_15,
+                     Panic_Score_17.5 = panic_score,
+                     Depressed_Thoughts_17.5 = dep_thoughts,
+                     Computer_Weekday_Use_16.5 = comp_week,
+                     Computer_Weekend_Use_16.5 = comp_wend,
+                     Computer_No_Int_House_14 = comp_house,
+                     Computer_Int_Room_14 = comp_int_bed_16,
+                     Computer_No_Int_Room_14 = comp_noint_bed_16,
+                     Bullying_16.5 = child_bull,
+                     Time_Alone_Weekday_16.5 = alon_week,
+                     Time_Alone_Weekend_16.5 = alon_wend) 
+```
+
+
+## Find out what's missing
+As a first step, I would like to replicate the graphic in the figure above using the synthetic dataset provided by the team.
+
+
+```{r, echo=FALSE, eval=FALSE}
+n_comp_cases <- function(df) {
+  dims <- df %>% filter(complete.cases(.)) %>% dim() 
+  dims[1] 
+}
+
+n_comp_cases(orig_dat)
+n_comp_cases(dat)
+```
+
+
+
+```{r}
+dat %>% naniar::vis_miss()
+
+```
+
+```{r}
+dat %>% visdat::vis_dat()
+
+```
+
+```{r}
+dat %>% naniar::gg_miss_var(show_pct = TRUE, facet = sex)
+
+```
+
+```{r}
+dat %>% naniar::gg_miss_span(ICD_Depression_Diagnosis_17.5, span_every = 1000) + labs(title = "Number of missing ICD Depression Diagnosis")
+
+```
+
+

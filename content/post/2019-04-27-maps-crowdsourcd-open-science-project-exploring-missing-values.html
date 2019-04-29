@@ -1,0 +1,55 @@
+---
+title: "MAPS Crowdsourced Open Science Project: Data Exploration"
+author: "Corey Pembleton"
+date: '2019-04-27'
+output: html_document
+slug: crowdsourced-open-science-project-data-exploration
+categories: [ "R", "dataexploration"]
+tags: ["data cleaning", "statistics", "naniar"]
+thumbnailImagePosition: "left"
+draft: true 
+---
+
+
+
+<p>In my previous post I explain the goals of this research project, and now that I have access to the data, it’s time to dig in and have a look at the data used for the analysis, how gaps in the data were imputed, and what other approaches could be used.</p>
+<div id="synthetic-data-imputations" class="section level3">
+<h3>Synthetic data imputations</h3>
+<p>One of the authors of the study, <a href="https://twitter.com/BertieArbon">Robert Arbon</a>, created synthesized versions of the ALSPAC dataset using the R <code>SynthPop</code> package to account for the large amounts of missing data (only 12.7% of participants had complete data on outcomes, exposure, and covariates). They describe the method as being similar to Multiple Imputation by Chained Equations (MICE) method (described in detail <a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3074241/">here</a>), testing variables created for accuracy and verified to contain no identical matches as the original.</p>
+</div>
+<div id="missing-data" class="section level2">
+<h2>Missing Data</h2>
+<p>I know from the published study that there is alot of missing data, at least according to the response variables in the study which are most relevant:</p>
+<p><img src="/img/data-flow.png" /></p>
+<p>In this post, I would like to explore this further to gain an understanding of the data used for the study, how it was imputated, and what implications this could have on future analytic stages.</p>
+<div id="libraries-used" class="section level4">
+<h4>Libraries Used</h4>
+<p>I will be using <code>naniar</code>, <code>SynthPop</code> and <code>simputation</code> along with the usual <code>tidyverse</code> suspects.</p>
+<pre class="r"><code>orig_dat &lt;- read_csv(&quot;https://raw.githubusercontent.com/pembletonc/OpenNorth_MAPS/master/maps-synthetic-data.csv&quot;) %&gt;% rename(ID = X1)
+
+dat &lt;- orig_dat %&gt;% select(ID, sex, 
+                     Secondary_Depression_Diagnosis_17.5 = secd_diag,
+                     Primary_Depression_Diagnosis_17.5 = prim_diag,
+                     ICD_Depression_Diagnosis_17.5 = has_dep_diag,
+                     Depression_Score_17.5 = dep_score,
+                     Depression_Band_15.5 = dep_band_15,
+                     Panic_Score_17.5 = panic_score,
+                     Depressed_Thoughts_17.5 = dep_thoughts,
+                     Computer_Weekday_Use_16.5 = comp_week,
+                     Computer_Weekend_Use_16.5 = comp_wend,
+                     Computer_No_Int_House_14 = comp_house,
+                     Computer_Int_Room_14 = comp_int_bed_16,
+                     Computer_No_Int_Room_14 = comp_noint_bed_16,
+                     Bullying_16.5 = child_bull,
+                     Time_Alone_Weekday_16.5 = alon_week,
+                     Time_Alone_Weekend_16.5 = alon_wend) </code></pre>
+<pre class="r"><code>dat %&gt;% naniar::vis_miss()</code></pre>
+<p><img src="/post/2019-04-27-maps-crowdsourcd-open-science-project-exploring-missing-values_files/figure-html/unnamed-chunk-3-1.png" width="672" /></p>
+<pre class="r"><code>dat %&gt;% visdat::vis_dat()</code></pre>
+<p><img src="/post/2019-04-27-maps-crowdsourcd-open-science-project-exploring-missing-values_files/figure-html/unnamed-chunk-4-1.png" width="672" /></p>
+<pre class="r"><code>dat %&gt;% naniar::gg_miss_var(show_pct = TRUE, facet = sex)</code></pre>
+<p><img src="/post/2019-04-27-maps-crowdsourcd-open-science-project-exploring-missing-values_files/figure-html/unnamed-chunk-5-1.png" width="672" /></p>
+<pre class="r"><code>dat %&gt;% naniar::gg_miss_span(ICD_Depression_Diagnosis_17.5, span_every = 1000) + labs(title = &quot;Number of missing ICD Depression Diagnosis&quot;)</code></pre>
+<p><img src="/post/2019-04-27-maps-crowdsourcd-open-science-project-exploring-missing-values_files/figure-html/unnamed-chunk-6-1.png" width="672" /></p>
+</div>
+</div>
