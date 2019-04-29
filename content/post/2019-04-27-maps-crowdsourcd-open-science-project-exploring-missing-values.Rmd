@@ -59,18 +59,36 @@ dat <- orig_dat %>% select(ID, sex,
 
 
 ## Find out what's missing
-As a first step, I would like to replicate the graphic in the figure above using the synthetic dataset provided by the team.
+As a first step, I would like to replicate the graphic in the figure above using the synthetic dataset provided by the Bristol research team.
 
+The second figure in the flow diagram features 14,665 "live born offspring (singletons and twins) who had not withdrawn from the study", which is my entire N population:
 
-```{r, echo=FALSE, eval=FALSE}
-n_comp_cases <- function(df) {
-  dims <- df %>% filter(complete.cases(.)) %>% dim() 
-  dims[1] 
-}
+```{r}
 
-n_comp_cases(orig_dat)
-n_comp_cases(dat)
+nrow(orig_dat)
+
 ```
+
+The synthetic dataset provided has 13,734 participants, 1,291 less than that used in the study. This difference isn't explicitly explained, but is implied that is the result of removing any rows in common with the original dataset. 
+
+The next figure in the flow diagram, 4,562, is the number of participants who completed the CIS-R at the age of 18. This is either the variables ```dep_score``` or ```dep_thoughts```, which I have renamed ```Depression_Score_17.5``` and ```Depressed_Thoughts_17.5```, respectively.
+
+```{r}
+#counter <- function(df) {df %>% filter(!is.na(.)) %>% summarise(count = n())}
+
+#counter(dat$Depression_Score_17.5)
+
+(Dep_Score <- dat %>% filter(!is.na(Depression_Score_17.5)) %>% summarise(count=n()))
+
+dat %>% filter(!is.na(Depressed_Thoughts_17.5)) %>% summarise(count=n())
+```
+
+Looks, like the score is the variable that has been used. The third, the exposure variable, is 3,009 participants with "exposure information at age 16", meaning those who had screentime at the age of 16. The authors of the study look at three types of screens: television screens, texting, and computer screens on weekends and weekdays. I have saved these variables for computer use as ```Computer_Weekday_Use_16.5``` & ```Computer_Weekend_Use_16.5```.
+
+```{r}
+dat %>% filter(!is.na(Computer_Weekday_Use_16.5) & !is.na(Computer_Weekend_Use_16.5)) %>% summarise(count=n())
+```
+
 
 
 
