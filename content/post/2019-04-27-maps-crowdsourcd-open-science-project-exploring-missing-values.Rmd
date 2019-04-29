@@ -18,11 +18,13 @@ library(kableExtra)
 
 In my previous post I explain the goals of this research project, and now that I have access to the data, it's time to dig in and have a look at the data used for the analysis, how gaps in the data were imputed, and what other approaches could be used.
 
-### Synthetic data imputations
+### Synthetic Data 
 
-One of the contributors of the MAPS study, [Robert Arbon](https://twitter.com/BertieArbon), created synthesized versions of the ALSPAC dataset using the R ```SynthPop``` package to account for the large amounts of missing data (only 12.7% of participants had complete data on outcomes, exposure, and covariates). They describe the method as being similar to the Multiple Imputation by Chained Equations (MICE) method (described in detail [here](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3074241/)), testing variables and other robustness tests in the imputated data. 
+One of the contributors of the MAPS study, [Robert Arbon](https://twitter.com/BertieArbon), created a synthesized version of the ALSPAC dataset using the R ```SynthPop``` package to account for privacy concerns in the data, and gave a detailed documentation on how the synthetic dataset (the one which will be used for this present MAPS study) was created.
 
-## Missing Data
+### Missing Data & Imputations
+
+the large amounts of missing data (only 12.7% of participants had complete data on outcomes, exposure, and covariates). They describe the method as being similar to the Multiple Imputation by Chained Equations (MICE) method (described in detail [here](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3074241/)). 
 
 The flow of how the authors arrived at only 12.7% of participants having completed the required outcomes/exposures/covariates looks like this:
 
@@ -32,7 +34,7 @@ In this post, I would like to explore the missing data further to gain an unders
 
 #### Libraries Used
 
-I will be using ```naniar```, ```SynthPop``` and ```simputation``` along with the usual ```tidyverse``` suspects.
+I will be using ```naniar``` and ```simputation``` along with the usual ```tidyverse``` suspects throughout this post.
 
 ```{r, cache=TRUE, error=FALSE, warning=FALSE, message=FALSE}
 orig_dat <- read_csv("https://raw.githubusercontent.com/pembletonc/OpenNorth_MAPS/master/maps-synthetic-data.csv") %>% rename(ID = X1)
