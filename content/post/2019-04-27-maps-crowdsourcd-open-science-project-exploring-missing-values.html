@@ -1,0 +1,97 @@
+---
+title: "MAPS Crowdsourced Open Science Project: Data Exploration"
+author: "Corey Pembleton"
+date: '2019-04-27'
+output: html_document
+slug: crowdsourced-open-science-project-data-exploration
+categories: [ "R", "dataexploration"]
+tags: ["data cleaning", "statistics", "naniar"]
+thumbnailImagePosition: "left"
+draft: true 
+---
+
+
+
+<p>In my previous post I explain the goals of this research project, and now that I have access to the data, it’s time to dig in and have a look at the data used for the analysis, how gaps in the data were imputed, and what other approaches could be used.</p>
+<div id="synthetic-data" class="section level3">
+<h3>Synthetic Data</h3>
+<p>One of the contributors of the MAPS study, <a href="https://twitter.com/BertieArbon">Robert Arbon</a>, created a synthesized version of the ALSPAC dataset using the R <code>SynthPop</code> package to account for privacy concerns in the data, and gave a detailed documentation on how the synthetic dataset (the one which will be used for this present MAPS study) was created.</p>
+</div>
+<div id="missing-data-imputations" class="section level3">
+<h3>Missing Data &amp; Imputations</h3>
+<p>the large amounts of missing data (only 12.7% of participants had complete data on outcomes, exposure, and covariates). They describe the method as being similar to the Multiple Imputation by Chained Equations (MICE) method (described in detail <a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3074241/">here</a>).</p>
+<p>The flow of how the authors arrived at only 12.7% of participants having completed the required outcomes/exposures/covariates looks like this:</p>
+<div class="figure">
+<img src="/img/data-flow.png" />
+
+</div>
+<p>In this post, I would like to explore the missing data further to gain an understanding of the data used for the study, how it was imputated, and what implications this could have on future analytic stages.</p>
+<div id="libraries-used" class="section level4">
+<h4>Libraries Used</h4>
+<p>I will be using <code>naniar</code> and <code>simputation</code> along with the usual <code>tidyverse</code> suspects throughout this post.</p>
+<pre class="r"><code>orig_dat &lt;- read_csv(&quot;https://raw.githubusercontent.com/pembletonc/OpenNorth_MAPS/master/maps-synthetic-data.csv&quot;) %&gt;% rename(ID = X1)
+
+dat &lt;- orig_dat %&gt;% select(ID, sex, 
+                     Secondary_Depression_Diagnosis_17.5 = secd_diag,
+                     Primary_Depression_Diagnosis_17.5 = prim_diag,
+                     ICD_Depression_Diagnosis_17.5 = has_dep_diag,
+                     Depression_Score_17.5 = dep_score,
+                     Depression_Band_15.5 = dep_band_15,
+                     Panic_Score_17.5 = panic_score,
+                     Depressed_Thoughts_17.5 = dep_thoughts,
+                     Computer_Weekday_Use_16.5 = comp_week,
+                     Computer_Weekend_Use_16.5 = comp_wend,
+                     Computer_No_Int_House_14 = comp_house,
+                     Computer_Int_Room_14 = comp_int_bed_16,
+                     Computer_No_Int_Room_14 = comp_noint_bed_16,
+                     Bullying_16.5 = child_bull,
+                     Time_Alone_Weekday_16.5 = alon_week,
+                     Time_Alone_Weekend_16.5 = alon_wend, text_week, text_wend,
+                     tv_week, tv_wend) </code></pre>
+</div>
+</div>
+<div id="find-out-whats-missing" class="section level2">
+<h2>Find out what’s missing</h2>
+<p>As a first step, I would like to replicate the graphic in the figure above using the synthetic dataset provided by the Bristol research team.</p>
+<p>The second figure in the flow diagram features 14,665 “live born offspring (singletons and twins) who had not withdrawn from the study”, which is my entire N population:</p>
+<pre class="r"><code>nrow(orig_dat)</code></pre>
+<pre><code>## [1] 13734</code></pre>
+<p>The synthetic dataset provided has 13,734 participants, 1,291 less than that used in the study. This difference isn’t explicitly explained, but is implied that is the result of removing any rows in common with the original dataset.</p>
+<p>The next figure in the flow diagram, 4,562, is the number of participants who completed the CIS-R at the age of 18. This is either the variables <code>dep_score</code> or <code>dep_thoughts</code>, which I have renamed <code>Depression_Score_17.5</code> and <code>Depressed_Thoughts_17.5</code>, respectively.</p>
+<pre class="r"><code>#counter &lt;- function(df) {df %&gt;% filter(!is.na(.)) %&gt;% summarise(count = n())}
+
+#counter(dat$Depression_Score_17.5)
+
+(Dep_Score &lt;- dat %&gt;% filter(!is.na(Depression_Score_17.5)) %&gt;% summarise(count=n()))</code></pre>
+<pre><code>## # A tibble: 1 x 1
+##   count
+##   &lt;int&gt;
+## 1  4513</code></pre>
+<pre class="r"><code>dat %&gt;% filter(!is.na(Depressed_Thoughts_17.5)) %&gt;% summarise(count=n())</code></pre>
+<pre><code>## # A tibble: 1 x 1
+##   count
+##   &lt;int&gt;
+## 1  1805</code></pre>
+<p>Looks, like the score is the variable that has been used. The third, the exposure variable, is 3,009 participants with “exposure information at age 16”, meaning those who had screentime at the age of 16. The authors of the study look at three types of screens: television screens, texting, and computer screens on weekends and weekdays. I have saved these variables for computer use as <code>Computer_Weekday_Use_16.5</code> &amp; <code>Computer_Weekend_Use_16.5</code>, and for tv and texting using <code>tv_week</code>, <code>tv_wend</code>, <code>text_week</code>, and <code>text_wend</code></p>
+<pre class="r"><code>vars &lt;- c(&quot;Computer_Weekday_Use_16.5&quot;, &quot;Computer_Weekend_Use_16.5&quot;,&quot;tv_week&quot;,&quot;tv_wend&quot;,
+          &quot;text_week&quot;, &quot;text_wend&quot;)
+
+dat %&gt;% filter(!is.na(Computer_Weekday_Use_16.5) &amp;
+                 !is.na(Computer_Weekend_Use_16.5) &amp;
+                 !is.na(tv_week) &amp; !is.na(tv_wend) &amp; !is.na(text_week), !is.na(text_wend)) %&gt;%  summarise(count=n()) </code></pre>
+<pre><code>## # A tibble: 1 x 1
+##   count
+##   &lt;int&gt;
+## 1  4778</code></pre>
+<p>Which gives a count of 4,778, 1,769 more than the 3,009 participants with exposure in the original dataset.</p>
+<p>However, when including only those who have completed the CIS-R at the age of 18, the figure is 3043</p>
+<p>The last and final determinant of participant relevance to the study, is the inclusion of covariate information</p>
+<pre class="r"><code>dat %&gt;% naniar::vis_miss()</code></pre>
+<p><img src="/post/2019-04-27-maps-crowdsourcd-open-science-project-exploring-missing-values_files/figure-html/unnamed-chunk-5-1.png" width="672" /></p>
+<pre class="r"><code>dat %&gt;% visdat::vis_dat()</code></pre>
+<p><img src="/post/2019-04-27-maps-crowdsourcd-open-science-project-exploring-missing-values_files/figure-html/unnamed-chunk-6-1.png" width="672" /></p>
+<pre class="r"><code>dat %&gt;% naniar::gg_miss_var(show_pct = TRUE, facet = sex)</code></pre>
+<p><img src="/post/2019-04-27-maps-crowdsourcd-open-science-project-exploring-missing-values_files/figure-html/unnamed-chunk-7-1.png" width="672" /></p>
+<pre class="r"><code>dat %&gt;% naniar::gg_miss_span(ICD_Depression_Diagnosis_17.5, span_every = 1000) + labs(title = &quot;Number of missing ICD Depression Diagnosis&quot;)</code></pre>
+<p><img src="/post/2019-04-27-maps-crowdsourcd-open-science-project-exploring-missing-values_files/figure-html/unnamed-chunk-8-1.png" width="672" /></p>
+</div>
