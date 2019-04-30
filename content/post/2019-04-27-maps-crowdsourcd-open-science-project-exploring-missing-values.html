@@ -5,41 +5,40 @@ date: '2019-04-27'
 output: html_document
 slug: crowdsourced-open-science-project-data-exploration
 categories: [ "R", "dataexploration"]
-tags: ["data cleaning", "statistics", "naniar"]
+tags: ["data cleaning", "statistics", "naniar", "tidyverse", "kableExtra"]
 thumbnailImagePosition: "left"
-draft: true 
+thumbnailImage: "/img/naniar.png"
 ---
 
 <script src="/rmarkdown-libs/kePrint/kePrint.js"></script>
 
 
-<p>In my previous post I explain the goals of this research project, and now that I have access to the data, it’s time to dig in and have a look at the data used for the analysis, how gaps in the data were imputed, and what other approaches could be used.</p>
+<p>In <a href="">this</a> previous post, the OpenNorth team explained the goals of this research project, and now that I have access to the data, it’s time to dig in and have a look at the data used for the analysis, particularly to gain an understanding of the variables used in the 16 models tested, and where <code>NA</code> values can be found.</p>
 <div id="synthetic-data" class="section level3">
 <h3>Synthetic Data</h3>
-<p>One of the contributors of the MAPS study, <a href="https://twitter.com/BertieArbon">Robert Arbon</a>, created a synthesized version of the ALSPAC dataset using the R <code>SynthPop</code> package to account for privacy concerns in the data, and gave a detailed documentation on how the synthetic dataset (the one which will be used for this present MAPS study) was created.</p>
+<p>One of the contributors of the MAPS study, <a href="https://twitter.com/BertieArbon">Robert Arbon</a>, created a synthesized version of the ALSPAC dataset using the R <code>SynthPop</code> package to account for privacy concerns, and gave a detailed documentation on how the synthetic dataset was created. This synthetic dataset will be used throughout this project.</p>
 </div>
 <div id="missing-data-imputations" class="section level3">
 <h3>Missing Data &amp; Imputations</h3>
-<p>the large amounts of missing data (only 12.7% of participants had complete data on outcomes, exposure, and covariates). They describe the method as being similar to the Multiple Imputation by Chained Equations (MICE) method (described in detail <a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3074241/">here</a>).</p>
-<p>The flow of how the authors arrived at only 12.7% of participants having completed the required outcomes/exposures/covariates looks like this:</p>
+<p>The way the ALSPAC dataset was constructed means that there are large amounts of missing values (not all of the participants responded to all of the questions), in the original dataset this means that only 12.7% of participants had complete data on outcomes, exposure, and covariates. To address this, the research team uses imputation to fill in the gaps, using a method described as being similar to the Multiple Imputation by Chained Equations (MICE) method (described in detail <a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3074241/">here</a>). The impacts of this will be reviewed in the next post on this topic.</p>
+<p>The flow of how the authors arrived at only 12.7% of participants having completed the required outcomes/exposures/covariates looks like this, a process I’ll be replicating in this post.</p>
 <div class="figure">
 <img src="/img/data-flow.png" />
 
 </div>
-<p>In this post, I would like to explore the missing data further to gain an understanding of the data used for the study, how it was imputated, and what implications this could have on future analytic stages.</p>
 <div id="libraries-used" class="section level4">
 <h4>Libraries Used</h4>
-<p>I will be using <code>naniar</code> and <code>simputation</code> along with the usual <code>tidyverse</code> suspects throughout this post.</p>
+<p>I will be using <code>naniar</code> along with the usual <code>tidyverse</code> suspects throughout this post.</p>
 <pre class="r"><code>orig_dat &lt;- read_csv(&quot;https://raw.githubusercontent.com/pembletonc/OpenNorth_MAPS/master/maps-synthetic-data.csv&quot;) %&gt;% rename(ID = X1)</code></pre>
 </div>
 </div>
 <div id="find-out-whats-missing" class="section level2">
 <h2>Find out what’s missing</h2>
 <p>As a first step, I would like to replicate the graphic in the figure above using the synthetic dataset provided by the Bristol research team.</p>
-<p>The second figure in the flow diagram features 14,665 “live born offspring (singletons and twins) who had not withdrawn from the study”, which is my entire N population:</p>
+<p>The second figure in the flow diagram features 14,665 “live born offspring (singletons and twins) who had not withdrawn from the study”, which is my entire population:</p>
 <pre class="r"><code>nrow(orig_dat)</code></pre>
 <pre><code>## [1] 13734</code></pre>
-<p>The synthetic dataset provided has 13,734 participants, 1,291 less than that used in the study. This difference isn’t explicitly explained, but it is implied that is the result of removing any rows in common with the original dataset.</p>
+<p>The synthetic dataset provided has 13,734 participants, 1,291 less than that used in the study. This difference isn’t explicitly explained in Robert Arbon’s articles, but it is implied that is the result of removing any rows in common with the original dataset.</p>
 <p>The next figure in the flow diagram, 4,562, is the number of participants who completed the CIS-R at the age of 18. This is either the variables <code>dep_score</code> or <code>dep_thoughts</code>:</p>
 <pre class="r"><code>orig_dat %&gt;% filter(!is.na(dep_score)) %&gt;% summarise(count=n())</code></pre>
 <pre><code>## # A tibble: 1 x 1
@@ -51,8 +50,11 @@ draft: true
 ##   count
 ##   &lt;int&gt;
 ## 1  1805</code></pre>
-<p>Looks like the score is the variable that has been used. The third figure in line, the exposure variable, is 3,009 participants with “exposure information at age 16”, meaning those who had screentime at the age of 16. The authors of the study look at three types of screen use on weekdays and weekends: television screens, texting, and computer screens. I have saved these variables for computer use <code>vars_model1</code>:</p>
-<pre class="r"><code>#time to write a function for this!
+<p>Looks like the score is the variable that has been used, with a value of 4,513.</p>
+<p>The third figure in the diagram, the exposure variable, is 3,009 participants with “exposure information at age 16”, meaning those who had screentime at the age of 16.</p>
+<p>The authors of the study look at three types of screen use on weekdays and weekends: television screens, texting, and computer screens. I have saved these variables for computer use as <code>vars_model1</code>:</p>
+<pre class="r"><code>#function to remove NA vlaues from selection of variables
+
 filter.NA.fun &lt;- function(df, var){ 
   
   var &lt;- enquo(var)
@@ -71,7 +73,8 @@ filter.NA.fun(orig_dat, vars_model1)</code></pre>
 ##   count
 ##   &lt;int&gt;
 ## 1  3043</code></pre>
-<p>Which gives a count of 3,043, not far from the original 3,009. In the second model, the authors look at the variables in model 1, with nine additional covariates:</p>
+<p>Which gives a count of 3,043, not far from the original 3,009.</p>
+<p>In the second model, the authors look at the variables in model 1, with nine additional covariates:</p>
 <pre class="r"><code>vars_model2 &lt;- c(&quot;dep_score&quot;, &quot;text_wend&quot;, &quot;text_week&quot;, &quot;tv_wend&quot;, &quot;tv_week&quot;,
                  &quot;comp_week&quot;, &quot;comp_wend&quot;, &quot;sex&quot;,&quot;anx_band_15&quot;,
                  &quot;mat_anx_0m&quot;,&quot;mat_anx_1&quot;,&quot;mat_anx_18m&quot;, &quot;mat_anx_8m&quot;,
@@ -83,7 +86,8 @@ filter.NA.fun(orig_dat, vars_model2)</code></pre>
 ##   count
 ##   &lt;int&gt;
 ## 1  1945</code></pre>
-<p>reducing the count of applicable data to 1,945 for model 2. Model 3 includes another 11 variables on top of those in model 2, for a total of 1,575:</p>
+<p>reducing the count of participants to 1,945 for Model 2.</p>
+<p>Model 3 includes another 11 variables on top of those in Model 2, with 1,575 participants:</p>
 <pre class="r"><code>vars_model3 &lt;- c(&quot;dep_score&quot;, &quot;text_wend&quot;, &quot;text_week&quot;, &quot;tv_wend&quot;, &quot;tv_week&quot;,
                  &quot;comp_week&quot;, &quot;comp_wend&quot;, &quot;sex&quot;,&quot;anx_band_15&quot;,
                  &quot;mat_anx_0m&quot;,&quot;mat_anx_1&quot;,&quot;mat_anx_18m&quot;, &quot;mat_anx_8m&quot;,
@@ -96,7 +100,7 @@ filter.NA.fun(orig_dat, vars_model3)</code></pre>
 ##   count
 ##   &lt;int&gt;
 ## 1  1575</code></pre>
-<p>Which begs the question, which “covariate information” is included in the final 1,869? It seems that it may be with model 2 only, as model 3 has nearly 300 participants missing.</p>
+<p>Which begs the question, which “covariate information” is included in the final 1,869? It seems that it may be with Model 2 only, as Model 3 has nearly 300 participants missing.</p>
 <p>The last and final determinant of participant relevance to the study, is the inclusion of a wide range of covariates, which the authors include in additional models 4a to 4l:</p>
 <blockquote>
 <p>“Each of the sub-models of model 4 additionally adjusted for time spent engaging in one other activity on weekdays or weekends (time alone [model 4a], on transport [model 4b], playing outdoors in summer [model 4c], playing outdoors in winter [model 4d], playing with others [model 4e], drawing, making or constructing things [model 4f], exercising [model 4g], completing school or college work [model 4h], reading [model 4i], playing musical instruments [model 4j], talking on a mobile phone [model 4k] and talking on a landline phone [model 4l]).”</p>
@@ -114,7 +118,6 @@ filter.NA.fun(orig_dat, vars_model3)</code></pre>
 map_df(all_model_vars, filter.NA.fun, df = orig_dat) %&gt;%
   add_column(model = names(all_model_vars)) %&gt;% 
   kableExtra::kable() %&gt;% kableExtra::kable_styling(bootstrap_options = c(&quot;striped&quot;))</code></pre>
-<pre><code>## Warning: Unknown columns: `alon_day`</code></pre>
 <table class="table table-striped" style="margin-left: auto; margin-right: auto;">
 <thead>
 <tr>
@@ -153,7 +156,7 @@ vars_model3
 </tr>
 <tr>
 <td style="text-align:right;">
-1575
+1573
 </td>
 <td style="text-align:left;">
 vars_model4a
@@ -251,5 +254,39 @@ vars_model4l
 </table>
 <div id="exploring-the-missings" class="section level3">
 <h3>Exploring the missings</h3>
+<p>While the mystery of why the final figure isn’t solved, I can still explore what the missing values are in the dataset further using the <code>naniar</code> package, a step that will be useful when considering how to impute additional data later on.</p>
+<p>Looking at the first model, what is missing where?</p>
+<pre class="r"><code>orig_dat %&gt;% select(one_of(vars_model1)) %&gt;% naniar::gg_miss_upset()</code></pre>
+<p><img src="/post/2019-04-27-maps-crowdsourcd-open-science-project-exploring-missing-values_files/figure-html/unnamed-chunk-9-1.png" width="672" /></p>
+<p>The majority of cases see missing values across all five variables together, although the amount of participants who haven’t completed the CIS-R at the age of 18, followed by those participants who didn’t report on screen use at the age of 16.</p>
+<p>Looking at the missing values another way, we can see how each variable may have inconsistencies across sexes:</p>
+<pre class="r"><code>orig_dat %&gt;% select(one_of(c(vars_model1, &quot;sex&quot;))) %&gt;%
+  naniar::gg_miss_var(show_pct = TRUE, facet = sex)</code></pre>
+<p><img src="/post/2019-04-27-maps-crowdsourcd-open-science-project-exploring-missing-values_files/figure-html/unnamed-chunk-10-1.png" width="672" /></p>
+<p>Surprisingly, there is consistently more missing values for female than male participants - this can be explored a bit further with a quick count:</p>
+<pre class="r"><code>orig_dat %&gt;% group_by(sex) %&gt;% summarise(count = n())</code></pre>
+<pre><code>## # A tibble: 2 x 2
+##   sex    count
+##   &lt;chr&gt;  &lt;int&gt;
+## 1 Female  7102
+## 2 Male    6632</code></pre>
+<p>Surprisingly, the study has a column “sex” which has gender variables! But I stray from the point: there are 7,102 female and 6,632 male respondents, although this doesn’t speak to why there is proportional inconsistency.Looking at all variables shows a mostly consistent pattern when it comes to gender, so perhaps the distribution isn’t drastically different for the entire dataset:</p>
+<pre class="r"><code>orig_dat %&gt;% naniar::gg_miss_var(show_pct = TRUE, facet = sex) + ggtitle(&quot;% missing values, by sex and variable&quot;)</code></pre>
+<p><img src="/post/2019-04-27-maps-crowdsourcd-open-science-project-exploring-missing-values_files/figure-html/unnamed-chunk-12-1.png" width="672" /></p>
+<p>Another interesting variable not thoroughly explored in the study, is economic class of the parents of participants.</p>
+<p>Looking at maternal social standing first, it appears that Level (i) has a lower overall % of missing responses:</p>
+<pre class="r"><code>orig_dat %&gt;% select(one_of(c(vars_model1, &quot;mat_ses&quot;))) %&gt;%
+  naniar::gg_miss_var(show_pct = TRUE, facet = mat_ses) + ggtitle(&quot;% of missing values, by maternal social class&quot;)</code></pre>
+<p><img src="/post/2019-04-27-maps-crowdsourcd-open-science-project-exploring-missing-values_files/figure-html/unnamed-chunk-13-1.png" width="672" /></p>
+<p>Which is echoed with paternal social standing as well:</p>
+<pre class="r"><code>orig_dat %&gt;% select(one_of(c(vars_model1, &quot;pat_ses&quot;))) %&gt;%
+  naniar::gg_miss_var(show_pct = TRUE, facet = pat_ses)+ ggtitle(&quot;% of missing values, by paternal social class&quot;)</code></pre>
+<p><img src="/post/2019-04-27-maps-crowdsourcd-open-science-project-exploring-missing-values_files/figure-html/unnamed-chunk-14-1.png" width="672" /></p>
+<p>This indicates that there are proportionately more respondents from class (i), which according to the data dictionary indicates “professional, e.g. occupation”, and fewer from classes (iii) “manual skilled occupation”, (iv) “partly skilled occupation” and (v) “unskilled occupation”. This brings up the question - what is the relationship between social class, screen-time, and depression?</p>
+</div>
+<div id="wrapping-up" class="section level3">
+<h3>Wrapping up</h3>
+<p>I believe there are many other ways to explore missing data, and understanding it has been a fundamentally important step prior to imputating the results across multiple datasets for analysis.</p>
+<p>I would like to thank <a href="https://twitter.com/nj_tierney">Nicholas Tierney</a>, <a href="https://twitter.com/visnut">Dianne Cook</a>, <a href="https://twitter.com/MilesMcBain">Miles McBain</a>, <a href="https://twitter.com/_ColinFay">Colin Fay</a>, and all other contributors for the wonderful <code>naniar</code> package, making working with tough data loaded with <code>NA</code>’s a real pleasure.</p>
 </div>
 </div>

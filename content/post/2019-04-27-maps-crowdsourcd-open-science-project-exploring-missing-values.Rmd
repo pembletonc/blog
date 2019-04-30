@@ -5,9 +5,9 @@ date: '2019-04-27'
 output: html_document
 slug: crowdsourced-open-science-project-data-exploration
 categories: [ "R", "dataexploration"]
-tags: ["data cleaning", "statistics", "naniar"]
+tags: ["data cleaning", "statistics", "naniar", "tidyverse", "kableExtra"]
 thumbnailImagePosition: "left"
-draft: true 
+thumbnailImage: "/img/naniar.png"
 ---
 
 ```{r setup, include=FALSE}
@@ -16,25 +16,22 @@ suppressWarnings(suppressPackageStartupMessages(library(tidyverse)))
 library(kableExtra)
 ```
 
-In my previous post I explain the goals of this research project, and now that I have access to the data, it's time to dig in and have a look at the data used for the analysis, how gaps in the data were imputed, and what other approaches could be used.
+In [this]() previous post, the OpenNorth team explained the goals of this research project, and now that I have access to the data, it's time to dig in and have a look at the data used for the analysis, particularly to gain an understanding of the variables used in the 16 models tested, and where ```NA``` values can be found.
 
 ### Synthetic Data 
 
-One of the contributors of the MAPS study, [Robert Arbon](https://twitter.com/BertieArbon), created a synthesized version of the ALSPAC dataset using the R ```SynthPop``` package to account for privacy concerns in the data, and gave a detailed documentation on how the synthetic dataset (the one which will be used for this present MAPS study) was created.
+One of the contributors of the MAPS study, [Robert Arbon](https://twitter.com/BertieArbon), created a synthesized version of the ALSPAC dataset using the R ```SynthPop``` package to account for privacy concerns, and gave a detailed documentation on how the synthetic dataset was created. This synthetic dataset will be used throughout this project.
 
 ### Missing Data & Imputations
+The way the ALSPAC dataset was constructed means that there are large amounts of missing values (not all of the participants responded to all of the questions), in the original dataset this means that only 12.7% of participants had complete data on outcomes, exposure, and covariates. To address this, the research team uses imputation to fill in the gaps, using a method described as  being similar to the Multiple Imputation by Chained Equations (MICE) method (described in detail [here](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3074241/)). The impacts of this will be reviewed in the next post on this topic. 
 
-the large amounts of missing data (only 12.7% of participants had complete data on outcomes, exposure, and covariates). They describe the method as being similar to the Multiple Imputation by Chained Equations (MICE) method (described in detail [here](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3074241/)). 
-
-The flow of how the authors arrived at only 12.7% of participants having completed the required outcomes/exposures/covariates looks like this:
+The flow of how the authors arrived at only 12.7% of participants having completed the required outcomes/exposures/covariates looks like this, a process I'll be replicating in this post.
 
 ![](/img/data-flow.png)
 
-In this post, I would like to explore the missing data further to gain an understanding of the data used for the study, how it was imputated, and what implications this could have on future analytic stages.
-
 #### Libraries Used
 
-I will be using ```naniar``` and ```simputation``` along with the usual ```tidyverse``` suspects throughout this post.
+I will be using ```naniar``` along with the usual ```tidyverse``` suspects throughout this post.
 
 ```{r, cache=TRUE, error=FALSE, warning=FALSE, message=FALSE}
 orig_dat <- read_csv("https://raw.githubusercontent.com/pembletonc/OpenNorth_MAPS/master/maps-synthetic-data.csv") %>% rename(ID = X1)
@@ -44,7 +41,7 @@ orig_dat <- read_csv("https://raw.githubusercontent.com/pembletonc/OpenNorth_MAP
 ## Find out what's missing
 As a first step, I would like to replicate the graphic in the figure above using the synthetic dataset provided by the Bristol research team.
 
-The second figure in the flow diagram features 14,665 "live born offspring (singletons and twins) who had not withdrawn from the study", which is my entire N population:
+The second figure in the flow diagram features 14,665 "live born offspring (singletons and twins) who had not withdrawn from the study", which is my entire population:
 
 ```{r}
 
@@ -52,7 +49,7 @@ nrow(orig_dat)
 
 ```
 
-The synthetic dataset provided has 13,734 participants, 1,291 less than that used in the study. This difference isn't explicitly explained, but it is implied that is the result of removing any rows in common with the original dataset. 
+The synthetic dataset provided has 13,734 participants, 1,291 less than that used in the study. This difference isn't explicitly explained in Robert Arbon's articles, but it is implied that is the result of removing any rows in common with the original dataset. 
 
 The next figure in the flow diagram, 4,562, is the number of participants who completed the CIS-R at the age of 18. This is either the variables ```dep_score``` or ```dep_thoughts```:
 
@@ -62,10 +59,15 @@ orig_dat %>% filter(!is.na(dep_score)) %>% summarise(count=n())
 orig_dat %>% filter(!is.na(dep_thoughts)) %>% summarise(count=n())
 ```
 
-Looks like the score is the variable that has been used. The third figure in line, the exposure variable, is 3,009 participants with "exposure information at age 16", meaning those who had screentime at the age of 16. The authors of the study look at three types of screen use on weekdays and weekends: television screens, texting, and computer screens. I have saved these variables for computer use ```vars_model1```:
+Looks like the score is the variable that has been used, with a value of 4,513.  
+
+The third figure in the diagram, the exposure variable, is 3,009 participants with "exposure information at age 16", meaning those who had screentime at the age of 16.  
+
+The authors of the study look at three types of screen use on weekdays and weekends: television screens, texting, and computer screens. I have saved these variables for computer use as ```vars_model1```:
 
 ```{r}
-#time to write a function for this!
+#function to remove NA vlaues from selection of variables
+
 filter.NA.fun <- function(df, var){ 
   
   var <- enquo(var)
@@ -80,10 +82,11 @@ vars_model1 <- c("dep_score", "text_wend", "text_week", "tv_wend", "tv_week",
           "comp_week", "comp_wend")
 
 filter.NA.fun(orig_dat, vars_model1)
-
 ```
 
-Which gives a count of 3,043, not far from the original 3,009. In the second model, the authors look at the variables in model 1, with nine additional covariates:
+Which gives a count of 3,043, not far from the original 3,009.    
+
+In the second model, the authors look at the variables in model 1, with nine additional covariates:
 
 ```{r}
 vars_model2 <- c("dep_score", "text_wend", "text_week", "tv_wend", "tv_week",
@@ -96,7 +99,9 @@ filter.NA.fun(orig_dat, vars_model2)
 
 ```
 
-reducing the count of applicable data to 1,945 for model 2. Model 3 includes another 11 variables on top of those in model 2, for a total of 1,575: 
+reducing the count of participants to 1,945 for Model 2.
+
+Model 3 includes another 11 variables on top of those in Model 2, with 1,575 participants: 
 
 ```{r}
 vars_model3 <- c("dep_score", "text_wend", "text_week", "tv_wend", "tv_week",
@@ -110,7 +115,7 @@ filter.NA.fun(orig_dat, vars_model3)
 
 ```
 
-Which begs the question, which "covariate information" is included in the final 1,869? It seems that it may be with model 2 only, as model 3 has nearly 300 participants missing.
+Which begs the question, which "covariate information" is included in the final 1,869? It seems that it may be with Model 2 only, as Model 3 has nearly 300 participants missing.
 
 The last and final determinant of participant relevance to the study, is the inclusion of a wide range of covariates, which the authors include in additional models 4a to 4l:
 
@@ -127,7 +132,7 @@ vars_model4a <- c("dep_score", "text_wend", "text_week", "tv_wend", "tv_week",
                  "mat_dep", "mat_edu", "mat_ses", "iq", "pat_pres", 
                  "pat_pres_10", "pat_pres_8", "num_home", "phys_cruel", "emot_cruel",
                  "child_bull","fam_tv_aft", "fam_tv_eve", "fam_tv_mor",
-                 "alon_week", "alon_day")
+                 "alon_week", "alon_wend")
 
 vars_model4b <- c("dep_score", "text_wend", "text_week", "tv_wend", "tv_week",
                   "comp_week", "comp_wend", "sex","anx_band_15",
@@ -236,8 +241,67 @@ map_df(all_model_vars, filter.NA.fun, df = orig_dat) %>%
 
 ```
 
-
-
 ### Exploring the missings
+
+While the mystery of why the final figure isn't solved, I can still explore what the missing values are in the dataset further using the ```naniar``` package, a step that will be useful when considering how to impute additional data later on.
+
+Looking at the first model, what is missing where?
+
+```{r}
+orig_dat %>% select(one_of(vars_model1)) %>% naniar::gg_miss_upset()
+
+```
+
+The majority of cases see missing values across all five variables together, although the amount of participants who haven't completed the CIS-R at the age of 18, followed by those participants who didn't report on screen use at the age of 16. 
+
+Looking at the missing values another way, we can see how each variable may have inconsistencies across sexes:
+
+```{r}
+orig_dat %>% select(one_of(c(vars_model1, "sex"))) %>%
+  naniar::gg_miss_var(show_pct = TRUE, facet = sex)
+```
+
+Surprisingly, there is consistently more missing values for female than male participants - this can be explored a bit further with a quick count:
+
+```{r}
+
+orig_dat %>% group_by(sex) %>% summarise(count = n())
+
+```
+
+
+Surprisingly, the study has a column "sex" which has gender variables! But I stray from the point: there are 7,102 female and 6,632 male respondents, although this doesn't speak to why there is proportional inconsistency.Looking at all variables shows a mostly consistent pattern when it comes to gender, so perhaps the distribution isn't drastically different for the entire dataset:
+
+```{r}
+orig_dat %>% naniar::gg_miss_var(show_pct = TRUE, facet = sex) + ggtitle("% missing values, by sex and variable")
+
+```
+
+
+
+Another interesting variable not thoroughly explored in the study, is economic class of the parents of participants.  
+
+Looking at maternal social standing first, it appears that Level (i) has a lower overall % of missing responses:
+
+```{r}
+orig_dat %>% select(one_of(c(vars_model1, "mat_ses"))) %>%
+  naniar::gg_miss_var(show_pct = TRUE, facet = mat_ses) + ggtitle("% of missing values, by maternal social class")
+```
+
+
+Which is echoed with paternal social standing as well:
+```{r}
+orig_dat %>% select(one_of(c(vars_model1, "pat_ses"))) %>%
+  naniar::gg_miss_var(show_pct = TRUE, facet = pat_ses)+ ggtitle("% of missing values, by paternal social class")
+```
+
+This indicates that there are proportionately more respondents from class (i), which according to the data dictionary indicates "professional, e.g. occupation", and fewer from classes (iii) "manual skilled occupation", (iv) "partly skilled occupation" and (v) "unskilled occupation". This brings up the question - what is the relationship between social class, screen-time, and depression? 
+
+### Wrapping up
+
+I believe there are many other ways to explore missing data, and understanding it has been a fundamentally important step prior to imputating the results across multiple datasets for analysis. 
+
+I would like to thank [Nicholas Tierney](https://twitter.com/nj_tierney), [Dianne Cook](https://twitter.com/visnut), [Miles McBain](https://twitter.com/MilesMcBain), [Colin Fay](https://twitter.com/_ColinFay), and all other contributors for the wonderful ```naniar``` package, making working with tough data loaded with ```NA```'s a real pleasure. 
+
 
 
