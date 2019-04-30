@@ -10,6 +10,7 @@ thumbnailImagePosition: "left"
 draft: true 
 ---
 
+<script src="/rmarkdown-libs/kePrint/kePrint.js"></script>
 
 
 <p>In my previous post I explain the goals of this research project, and now that I have access to the data, it’s time to dig in and have a look at the data used for the analysis, how gaps in the data were imputed, and what other approaches could be used.</p>
@@ -29,25 +30,7 @@ draft: true
 <div id="libraries-used" class="section level4">
 <h4>Libraries Used</h4>
 <p>I will be using <code>naniar</code> and <code>simputation</code> along with the usual <code>tidyverse</code> suspects throughout this post.</p>
-<pre class="r"><code>orig_dat &lt;- read_csv(&quot;https://raw.githubusercontent.com/pembletonc/OpenNorth_MAPS/master/maps-synthetic-data.csv&quot;) %&gt;% rename(ID = X1)
-
-dat &lt;- orig_dat %&gt;% select(ID, sex, 
-                     Secondary_Depression_Diagnosis_17.5 = secd_diag,
-                     Primary_Depression_Diagnosis_17.5 = prim_diag,
-                     ICD_Depression_Diagnosis_17.5 = has_dep_diag,
-                     Depression_Score_17.5 = dep_score,
-                     Depression_Band_15.5 = dep_band_15,
-                     Panic_Score_17.5 = panic_score,
-                     Depressed_Thoughts_17.5 = dep_thoughts,
-                     Computer_Weekday_Use_16.5 = comp_week,
-                     Computer_Weekend_Use_16.5 = comp_wend,
-                     Computer_No_Int_House_14 = comp_house,
-                     Computer_Int_Room_14 = comp_int_bed_16,
-                     Computer_No_Int_Room_14 = comp_noint_bed_16,
-                     Bullying_16.5 = child_bull,
-                     Time_Alone_Weekday_16.5 = alon_week,
-                     Time_Alone_Weekend_16.5 = alon_wend, text_week, text_wend,
-                     tv_week, tv_wend) </code></pre>
+<pre class="r"><code>orig_dat &lt;- read_csv(&quot;https://raw.githubusercontent.com/pembletonc/OpenNorth_MAPS/master/maps-synthetic-data.csv&quot;) %&gt;% rename(ID = X1)</code></pre>
 </div>
 </div>
 <div id="find-out-whats-missing" class="section level2">
@@ -56,42 +39,217 @@ dat &lt;- orig_dat %&gt;% select(ID, sex,
 <p>The second figure in the flow diagram features 14,665 “live born offspring (singletons and twins) who had not withdrawn from the study”, which is my entire N population:</p>
 <pre class="r"><code>nrow(orig_dat)</code></pre>
 <pre><code>## [1] 13734</code></pre>
-<p>The synthetic dataset provided has 13,734 participants, 1,291 less than that used in the study. This difference isn’t explicitly explained, but is implied that is the result of removing any rows in common with the original dataset.</p>
-<p>The next figure in the flow diagram, 4,562, is the number of participants who completed the CIS-R at the age of 18. This is either the variables <code>dep_score</code> or <code>dep_thoughts</code>, which I have renamed <code>Depression_Score_17.5</code> and <code>Depressed_Thoughts_17.5</code>, respectively.</p>
-<pre class="r"><code>#counter &lt;- function(df) {df %&gt;% filter(!is.na(.)) %&gt;% summarise(count = n())}
-
-#counter(dat$Depression_Score_17.5)
-
-(Dep_Score &lt;- dat %&gt;% filter(!is.na(Depression_Score_17.5)) %&gt;% summarise(count=n()))</code></pre>
+<p>The synthetic dataset provided has 13,734 participants, 1,291 less than that used in the study. This difference isn’t explicitly explained, but it is implied that is the result of removing any rows in common with the original dataset.</p>
+<p>The next figure in the flow diagram, 4,562, is the number of participants who completed the CIS-R at the age of 18. This is either the variables <code>dep_score</code> or <code>dep_thoughts</code>:</p>
+<pre class="r"><code>orig_dat %&gt;% filter(!is.na(dep_score)) %&gt;% summarise(count=n())</code></pre>
 <pre><code>## # A tibble: 1 x 1
 ##   count
 ##   &lt;int&gt;
 ## 1  4513</code></pre>
-<pre class="r"><code>dat %&gt;% filter(!is.na(Depressed_Thoughts_17.5)) %&gt;% summarise(count=n())</code></pre>
+<pre class="r"><code>orig_dat %&gt;% filter(!is.na(dep_thoughts)) %&gt;% summarise(count=n())</code></pre>
 <pre><code>## # A tibble: 1 x 1
 ##   count
 ##   &lt;int&gt;
 ## 1  1805</code></pre>
-<p>Looks, like the score is the variable that has been used. The third, the exposure variable, is 3,009 participants with “exposure information at age 16”, meaning those who had screentime at the age of 16. The authors of the study look at three types of screens: television screens, texting, and computer screens on weekends and weekdays. I have saved these variables for computer use as <code>Computer_Weekday_Use_16.5</code> &amp; <code>Computer_Weekend_Use_16.5</code>, and for tv and texting using <code>tv_week</code>, <code>tv_wend</code>, <code>text_week</code>, and <code>text_wend</code></p>
-<pre class="r"><code>vars &lt;- c(&quot;Computer_Weekday_Use_16.5&quot;, &quot;Computer_Weekend_Use_16.5&quot;,&quot;tv_week&quot;,&quot;tv_wend&quot;,
-          &quot;text_week&quot;, &quot;text_wend&quot;)
+<p>Looks like the score is the variable that has been used. The third figure in line, the exposure variable, is 3,009 participants with “exposure information at age 16”, meaning those who had screentime at the age of 16. The authors of the study look at three types of screen use on weekdays and weekends: television screens, texting, and computer screens. I have saved these variables for computer use <code>vars_model1</code>:</p>
+<pre class="r"><code>#time to write a function for this!
+filter.NA.fun &lt;- function(df, var){ 
+  
+  var &lt;- enquo(var)
+  
+  df %&gt;% 
+    select(one_of(!!var)) %&gt;%
+    filter_all(all_vars(!is.na(.))) %&gt;% 
+    summarise(count = n()) 
+  } 
 
-dat %&gt;% filter(!is.na(Computer_Weekday_Use_16.5) &amp;
-                 !is.na(Computer_Weekend_Use_16.5) &amp;
-                 !is.na(tv_week) &amp; !is.na(tv_wend) &amp; !is.na(text_week), !is.na(text_wend)) %&gt;%  summarise(count=n()) </code></pre>
+vars_model1 &lt;- c(&quot;dep_score&quot;, &quot;text_wend&quot;, &quot;text_week&quot;, &quot;tv_wend&quot;, &quot;tv_week&quot;,
+          &quot;comp_week&quot;, &quot;comp_wend&quot;)
+
+filter.NA.fun(orig_dat, vars_model1)</code></pre>
 <pre><code>## # A tibble: 1 x 1
 ##   count
 ##   &lt;int&gt;
-## 1  4778</code></pre>
-<p>Which gives a count of 4,778, 1,769 more than the 3,009 participants with exposure in the original dataset.</p>
-<p>However, when including only those who have completed the CIS-R at the age of 18, the figure is 3043</p>
-<p>The last and final determinant of participant relevance to the study, is the inclusion of covariate information</p>
-<pre class="r"><code>dat %&gt;% naniar::vis_miss()</code></pre>
-<p><img src="/post/2019-04-27-maps-crowdsourcd-open-science-project-exploring-missing-values_files/figure-html/unnamed-chunk-5-1.png" width="672" /></p>
-<pre class="r"><code>dat %&gt;% visdat::vis_dat()</code></pre>
-<p><img src="/post/2019-04-27-maps-crowdsourcd-open-science-project-exploring-missing-values_files/figure-html/unnamed-chunk-6-1.png" width="672" /></p>
-<pre class="r"><code>dat %&gt;% naniar::gg_miss_var(show_pct = TRUE, facet = sex)</code></pre>
-<p><img src="/post/2019-04-27-maps-crowdsourcd-open-science-project-exploring-missing-values_files/figure-html/unnamed-chunk-7-1.png" width="672" /></p>
-<pre class="r"><code>dat %&gt;% naniar::gg_miss_span(ICD_Depression_Diagnosis_17.5, span_every = 1000) + labs(title = &quot;Number of missing ICD Depression Diagnosis&quot;)</code></pre>
-<p><img src="/post/2019-04-27-maps-crowdsourcd-open-science-project-exploring-missing-values_files/figure-html/unnamed-chunk-8-1.png" width="672" /></p>
+## 1  3043</code></pre>
+<p>Which gives a count of 3,043, not far from the original 3,009. In the second model, the authors look at the variables in model 1, with nine additional covariates:</p>
+<pre class="r"><code>vars_model2 &lt;- c(&quot;dep_score&quot;, &quot;text_wend&quot;, &quot;text_week&quot;, &quot;tv_wend&quot;, &quot;tv_week&quot;,
+                 &quot;comp_week&quot;, &quot;comp_wend&quot;, &quot;sex&quot;,&quot;anx_band_15&quot;,
+                 &quot;mat_anx_0m&quot;,&quot;mat_anx_1&quot;,&quot;mat_anx_18m&quot;, &quot;mat_anx_8m&quot;,
+                 &quot;mat_dep&quot;, &quot;mat_edu&quot;, &quot;mat_ses&quot;)
+
+
+filter.NA.fun(orig_dat, vars_model2)</code></pre>
+<pre><code>## # A tibble: 1 x 1
+##   count
+##   &lt;int&gt;
+## 1  1945</code></pre>
+<p>reducing the count of applicable data to 1,945 for model 2. Model 3 includes another 11 variables on top of those in model 2, for a total of 1,575:</p>
+<pre class="r"><code>vars_model3 &lt;- c(&quot;dep_score&quot;, &quot;text_wend&quot;, &quot;text_week&quot;, &quot;tv_wend&quot;, &quot;tv_week&quot;,
+                 &quot;comp_week&quot;, &quot;comp_wend&quot;, &quot;sex&quot;,&quot;anx_band_15&quot;,
+                 &quot;mat_anx_0m&quot;,&quot;mat_anx_1&quot;,&quot;mat_anx_18m&quot;, &quot;mat_anx_8m&quot;,
+                 &quot;mat_dep&quot;, &quot;mat_edu&quot;, &quot;mat_ses&quot;, &quot;iq&quot;, &quot;pat_pres&quot;, 
+                 &quot;pat_pres_10&quot;, &quot;pat_pres_8&quot;, &quot;num_home&quot;, &quot;phys_cruel&quot;, &quot;emot_cruel&quot;,
+                 &quot;child_bull&quot;,&quot;fam_tv_aft&quot;, &quot;fam_tv_eve&quot;, &quot;fam_tv_mor&quot;)
+
+filter.NA.fun(orig_dat, vars_model3)</code></pre>
+<pre><code>## # A tibble: 1 x 1
+##   count
+##   &lt;int&gt;
+## 1  1575</code></pre>
+<p>Which begs the question, which “covariate information” is included in the final 1,869? It seems that it may be with model 2 only, as model 3 has nearly 300 participants missing.</p>
+<p>The last and final determinant of participant relevance to the study, is the inclusion of a wide range of covariates, which the authors include in additional models 4a to 4l:</p>
+<blockquote>
+<p>“Each of the sub-models of model 4 additionally adjusted for time spent engaging in one other activity on weekdays or weekends (time alone [model 4a], on transport [model 4b], playing outdoors in summer [model 4c], playing outdoors in winter [model 4d], playing with others [model 4e], drawing, making or constructing things [model 4f], exercising [model 4g], completing school or college work [model 4h], reading [model 4i], playing musical instruments [model 4j], talking on a mobile phone [model 4k] and talking on a landline phone [model 4l]).”</p>
+</blockquote>
+<p>To get an idea of what the differences are in data availability across each of the models, I can test and review them using <code>purrr::map()</code> (variable model lists not shown)):</p>
+<pre class="r"><code>all_model_vars &lt;- list(vars_model1 = vars_model1, vars_model2 = vars_model2,
+                       vars_model3 = vars_model3,  vars_model4a = vars_model4a,
+                       vars_model4b = vars_model4b,
+                       vars_model4c = vars_model4c, vars_model4d = vars_model4d,
+                       vars_model4e = vars_model4e, vars_model4f = vars_model4f,
+                       vars_model4g = vars_model4g, vars_model4h = vars_model4h,
+                       vars_model4i = vars_model4i, vars_model4j = vars_model4j,
+                       vars_model4k = vars_model4k, vars_model4l = vars_model4l)
+
+map_df(all_model_vars, filter.NA.fun, df = orig_dat) %&gt;%
+  add_column(model = names(all_model_vars)) %&gt;% 
+  kableExtra::kable() %&gt;% kableExtra::kable_styling(bootstrap_options = c(&quot;striped&quot;))</code></pre>
+<pre><code>## Warning: Unknown columns: `alon_day`</code></pre>
+<table class="table table-striped" style="margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:right;">
+count
+</th>
+<th style="text-align:left;">
+model
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:right;">
+3043
+</td>
+<td style="text-align:left;">
+vars_model1
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+1945
+</td>
+<td style="text-align:left;">
+vars_model2
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+1575
+</td>
+<td style="text-align:left;">
+vars_model3
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+1575
+</td>
+<td style="text-align:left;">
+vars_model4a
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+1565
+</td>
+<td style="text-align:left;">
+vars_model4b
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+1563
+</td>
+<td style="text-align:left;">
+vars_model4c
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+1567
+</td>
+<td style="text-align:left;">
+vars_model4d
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+1568
+</td>
+<td style="text-align:left;">
+vars_model4e
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+1566
+</td>
+<td style="text-align:left;">
+vars_model4f
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+1555
+</td>
+<td style="text-align:left;">
+vars_model4g
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+1567
+</td>
+<td style="text-align:left;">
+vars_model4h
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+1563
+</td>
+<td style="text-align:left;">
+vars_model4i
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+1566
+</td>
+<td style="text-align:left;">
+vars_model4j
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+1572
+</td>
+<td style="text-align:left;">
+vars_model4k
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+1575
+</td>
+<td style="text-align:left;">
+vars_model4l
+</td>
+</tr>
+</tbody>
+</table>
+<div id="exploring-the-missings" class="section level3">
+<h3>Exploring the missings</h3>
+</div>
 </div>

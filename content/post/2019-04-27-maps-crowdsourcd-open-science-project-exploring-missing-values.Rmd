@@ -38,24 +38,6 @@ I will be using ```naniar``` and ```simputation``` along with the usual ```tidyv
 
 ```{r, cache=TRUE, error=FALSE, warning=FALSE, message=FALSE}
 orig_dat <- read_csv("https://raw.githubusercontent.com/pembletonc/OpenNorth_MAPS/master/maps-synthetic-data.csv") %>% rename(ID = X1)
-
-dat <- orig_dat %>% select(ID, sex, 
-                     Secondary_Depression_Diagnosis_17.5 = secd_diag,
-                     Primary_Depression_Diagnosis_17.5 = prim_diag,
-                     ICD_Depression_Diagnosis_17.5 = has_dep_diag,
-                     Depression_Score_17.5 = dep_score,
-                     Depression_Band_15.5 = dep_band_15,
-                     Panic_Score_17.5 = panic_score,
-                     Depressed_Thoughts_17.5 = dep_thoughts,
-                     Computer_Weekday_Use_16.5 = comp_week,
-                     Computer_Weekend_Use_16.5 = comp_wend,
-                     Computer_No_Int_House_14 = comp_house,
-                     Computer_Int_Room_14 = comp_int_bed_16,
-                     Computer_No_Int_Room_14 = comp_noint_bed_16,
-                     Bullying_16.5 = child_bull,
-                     Time_Alone_Weekday_16.5 = alon_week,
-                     Time_Alone_Weekend_16.5 = alon_wend, text_week, text_wend,
-                     tv_week, tv_wend) 
 ```
 
 
@@ -70,85 +52,192 @@ nrow(orig_dat)
 
 ```
 
-The synthetic dataset provided has 13,734 participants, 1,291 less than that used in the study. This difference isn't explicitly explained, but is implied that is the result of removing any rows in common with the original dataset. 
+The synthetic dataset provided has 13,734 participants, 1,291 less than that used in the study. This difference isn't explicitly explained, but it is implied that is the result of removing any rows in common with the original dataset. 
 
-The next figure in the flow diagram, 4,562, is the number of participants who completed the CIS-R at the age of 18. This is either the variables ```dep_score``` or ```dep_thoughts```, which I have renamed ```Depression_Score_17.5``` and ```Depressed_Thoughts_17.5```, respectively.
+The next figure in the flow diagram, 4,562, is the number of participants who completed the CIS-R at the age of 18. This is either the variables ```dep_score``` or ```dep_thoughts```:
 
 ```{r}
-#counter <- function(df) {df %>% filter(!is.na(.)) %>% summarise(count = n())}
+orig_dat %>% filter(!is.na(dep_score)) %>% summarise(count=n())
 
-#counter(dat$Depression_Score_17.5)
-
-(Dep_Score <- dat %>% filter(!is.na(Depression_Score_17.5)) %>% summarise(count=n()))
-
-dat %>% filter(!is.na(Depressed_Thoughts_17.5)) %>% summarise(count=n())
+orig_dat %>% filter(!is.na(dep_thoughts)) %>% summarise(count=n())
 ```
 
-Looks, like the score is the variable that has been used. The third, the exposure variable, is 3,009 participants with "exposure information at age 16", meaning those who had screentime at the age of 16. The authors of the study look at three types of screens: television screens, texting, and computer screens on weekends and weekdays. I have saved these variables for computer use as ```Computer_Weekday_Use_16.5``` & ```Computer_Weekend_Use_16.5```, and for tv and texting using ```tv_week```, ```tv_wend```, ```text_week```, and ```text_wend```
+Looks like the score is the variable that has been used. The third figure in line, the exposure variable, is 3,009 participants with "exposure information at age 16", meaning those who had screentime at the age of 16. The authors of the study look at three types of screen use on weekdays and weekends: television screens, texting, and computer screens. I have saved these variables for computer use ```vars_model1```:
 
 ```{r}
+#time to write a function for this!
+filter.NA.fun <- function(df, var){ 
+  
+  var <- enquo(var)
+  
+  df %>% 
+    select(one_of(!!var)) %>%
+    filter_all(all_vars(!is.na(.))) %>% 
+    summarise(count = n()) 
+  } 
 
-vars <- c("Computer_Weekday_Use_16.5", "Computer_Weekend_Use_16.5","tv_week","tv_wend",
-          "text_week", "text_wend")
+vars_model1 <- c("dep_score", "text_wend", "text_week", "tv_wend", "tv_week",
+          "comp_week", "comp_wend")
 
-dat %>% filter(!is.na(Computer_Weekday_Use_16.5) &
-                 !is.na(Computer_Weekend_Use_16.5) &
-                 !is.na(tv_week) & !is.na(tv_wend) & !is.na(text_week), !is.na(text_wend)) %>%  summarise(count=n()) 
+filter.NA.fun(orig_dat, vars_model1)
 
 ```
 
-Which gives a count of 4,778, however, when including only those who have completed the CIS-R at the age of 18, the figure is `r dat %>% filter(!is.na(Depression_Score_17.5) & !is.na(Computer_Weekday_Use_16.5) &
-                 !is.na(Computer_Weekend_Use_16.5) &
-                 !is.na(tv_week) & !is.na(tv_wend) & !is.na(text_week), !is.na(text_wend)) %>% summarise(count=n()))`, much closer to the 3,009 in the study.
-
-
-The last and final determinant of participant relevance to the study, is the inclusion of covariate information, which the authors include in the multitude of models used:
-
-
-> "Model 2 adjusted for sex, maternal age, anxiety/depression at 15 years, maternal anxiety and depression, maternal education, and parental SES. Model 3 also included IQ, parental conflict, presence of the child’s father, number of people living in the child’s home, bullying, and family TV use in early life. Each of the sub-models of model 4 additionally adjusted for time spent engaging in one other activity on weekdays or weekends (time alone [model 4a], on transport [model 4b], playing outdoors in summer [model 4c], playing outdoors in winter [model 4d], playing with others [model 4e], drawing, making or constructing things [model 4f], exercising [model 4g], completing school or college work [model 4h], reading [model 4i], playing musical instruments [model 4j], talking on a mobile phone [model 4k] and talking on a landline phone [model 4l])."
-
-When including this laundry list of covariates, the "final" figure of available data is 1,586 (Model 3) participants:
+Which gives a count of 3,043, not far from the original 3,009. In the second model, the authors look at the variables in model 1, with nine additional covariates:
 
 ```{r}
+vars_model2 <- c("dep_score", "text_wend", "text_week", "tv_wend", "tv_week",
+                 "comp_week", "comp_wend", "sex","anx_band_15",
+                 "mat_anx_0m","mat_anx_1","mat_anx_18m", "mat_anx_8m",
+                 "mat_dep", "mat_edu", "mat_ses")
 
+
+filter.NA.fun(orig_dat, vars_model2)
+
+```
+
+reducing the count of applicable data to 1,945 for model 2. Model 3 includes another 11 variables on top of those in model 2, for a total of 1,575: 
+
+```{r}
 vars_model3 <- c("dep_score", "text_wend", "text_week", "tv_wend", "tv_week",
                  "comp_week", "comp_wend", "sex","anx_band_15",
                  "mat_anx_0m","mat_anx_1","mat_anx_18m", "mat_anx_8m",
                  "mat_dep", "mat_edu", "mat_ses", "iq", "pat_pres", 
-                 "pat_pres_10", "pat_pres_8", "num_home", "phys_cruel", "emot_crul",
-                 "child_bull","fam_tv_aft", "fam_tv_eve", "fam_tv_morn")
+                 "pat_pres_10", "pat_pres_8", "num_home", "phys_cruel", "emot_cruel",
+                 "child_bull","fam_tv_aft", "fam_tv_eve", "fam_tv_mor")
 
-
-orig_dat %>% select(one_of(vars_model3)) %>% filter_all(all_vars(!is.na(.))) %>% summarise(count = n())
+filter.NA.fun(orig_dat, vars_model3)
 
 ```
 
-The last variable list in model 3 is the largest gap between the synthetic dataset and the original participant figures, before proceeding with the analysis I'll be looking into whether or not I missed something with the MAPS research team. In the meantime, now that I now what's there and what isn't there, it would be interesting to explore further what's missing before imputing the dataset.
+Which begs the question, which "covariate information" is included in the final 1,869? It seems that it may be with model 2 only, as model 3 has nearly 300 participants missing.
+
+The last and final determinant of participant relevance to the study, is the inclusion of a wide range of covariates, which the authors include in additional models 4a to 4l:
+
+
+> "Each of the sub-models of model 4 additionally adjusted for time spent engaging in one other activity on weekdays or weekends (time alone [model 4a], on transport [model 4b], playing outdoors in summer [model 4c], playing outdoors in winter [model 4d], playing with others [model 4e], drawing, making or constructing things [model 4f], exercising [model 4g], completing school or college work [model 4h], reading [model 4i], playing musical instruments [model 4j], talking on a mobile phone [model 4k] and talking on a landline phone [model 4l])."
+
+To get an idea of what the differences are in data availability across each of the models, I can test and review them using ```purrr::map()``` (variable model lists not shown)):
+
+```{r, echo=FALSE}
+
+vars_model4a <- c("dep_score", "text_wend", "text_week", "tv_wend", "tv_week",
+                 "comp_week", "comp_wend", "sex","anx_band_15",
+                 "mat_anx_0m","mat_anx_1","mat_anx_18m", "mat_anx_8m",
+                 "mat_dep", "mat_edu", "mat_ses", "iq", "pat_pres", 
+                 "pat_pres_10", "pat_pres_8", "num_home", "phys_cruel", "emot_cruel",
+                 "child_bull","fam_tv_aft", "fam_tv_eve", "fam_tv_mor",
+                 "alon_week", "alon_day")
+
+vars_model4b <- c("dep_score", "text_wend", "text_week", "tv_wend", "tv_week",
+                  "comp_week", "comp_wend", "sex","anx_band_15",
+                  "mat_anx_0m","mat_anx_1","mat_anx_18m", "mat_anx_8m",
+                  "mat_dep", "mat_edu", "mat_ses", "iq", "pat_pres", 
+                  "pat_pres_10", "pat_pres_8", "num_home", "phys_cruel", "emot_cruel",
+                  "child_bull","fam_tv_aft", "fam_tv_eve", "fam_tv_mor",
+                  "tran_week","tran_wend")
+
+vars_model4c <- c("dep_score", "text_wend", "text_week", "tv_wend", "tv_week",
+                  "comp_week", "comp_wend", "sex","anx_band_15",
+                  "mat_anx_0m","mat_anx_1","mat_anx_18m", "mat_anx_8m",
+                  "mat_dep", "mat_edu", "mat_ses", "iq", "pat_pres", 
+                  "pat_pres_10", "pat_pres_8", "num_home", "phys_cruel", "emot_cruel",
+                  "child_bull","fam_tv_aft", "fam_tv_eve", "fam_tv_mor",
+                  "out_sum_wend", "out_sum_week")
+
+vars_model4d <- c("dep_score", "text_wend", "text_week", "tv_wend", "tv_week",
+                  "comp_week", "comp_wend", "sex","anx_band_15",
+                  "mat_anx_0m","mat_anx_1","mat_anx_18m", "mat_anx_8m",
+                  "mat_dep", "mat_edu", "mat_ses", "iq", "pat_pres", 
+                  "pat_pres_10", "pat_pres_8", "num_home", "phys_cruel", "emot_cruel",
+                  "child_bull","fam_tv_aft", "fam_tv_eve", "fam_tv_mor",
+                  "out_win_wend", "out_win_week")
+
+vars_model4e <- c("dep_score", "text_wend", "text_week", "tv_wend", "tv_week",
+                  "comp_week", "comp_wend", "sex","anx_band_15",
+                  "mat_anx_0m","mat_anx_1","mat_anx_18m", "mat_anx_8m",
+                  "mat_dep", "mat_edu", "mat_ses", "iq", "pat_pres", 
+                  "pat_pres_10", "pat_pres_8", "num_home", "phys_cruel", "emot_cruel",
+                  "child_bull","fam_tv_aft", "fam_tv_eve", "fam_tv_mor",
+                  "play_week", "play_wend")
+
+vars_model4f <- c("dep_score", "text_wend", "text_week", "tv_wend", "tv_week",
+                  "comp_week", "comp_wend", "sex","anx_band_15",
+                  "mat_anx_0m","mat_anx_1","mat_anx_18m", "mat_anx_8m",
+                  "mat_dep", "mat_edu", "mat_ses", "iq", "pat_pres", 
+                  "pat_pres_10", "pat_pres_8", "num_home", "phys_cruel", "emot_cruel",
+                  "child_bull","fam_tv_aft", "fam_tv_eve", "fam_tv_mor",
+                  "draw_week", "draw_wend")
+
+vars_model4g <- c("dep_score", "text_wend", "text_week", "tv_wend", "tv_week",
+                  "comp_week", "comp_wend", "sex","anx_band_15",
+                  "mat_anx_0m","mat_anx_1","mat_anx_18m", "mat_anx_8m",
+                  "mat_dep", "mat_edu", "mat_ses", "iq", "pat_pres", 
+                  "pat_pres_10", "pat_pres_8", "num_home", "phys_cruel", "emot_cruel",
+                  "child_bull","fam_tv_aft", "fam_tv_eve", "fam_tv_mor",
+                  "exercise")
+
+vars_model4h <- c("dep_score", "text_wend", "text_week", "tv_wend", "tv_week",
+                  "comp_week", "comp_wend", "sex","anx_band_15",
+                  "mat_anx_0m","mat_anx_1","mat_anx_18m", "mat_anx_8m",
+                  "mat_dep", "mat_edu", "mat_ses", "iq", "pat_pres", 
+                  "pat_pres_10", "pat_pres_8", "num_home", "phys_cruel", "emot_cruel",
+                  "child_bull","fam_tv_aft", "fam_tv_eve", "fam_tv_mor",
+                  "work_wend", "work_week")
+
+vars_model4i <- c("dep_score", "text_wend", "text_week", "tv_wend", "tv_week",
+                  "comp_week", "comp_wend", "sex","anx_band_15",
+                  "mat_anx_0m","mat_anx_1","mat_anx_18m", "mat_anx_8m",
+                  "mat_dep", "mat_edu", "mat_ses", "iq", "pat_pres", 
+                  "pat_pres_10", "pat_pres_8", "num_home", "phys_cruel", "emot_cruel",
+                  "child_bull","fam_tv_aft", "fam_tv_eve", "fam_tv_mor",
+                  "read_wend", "read_week")
+
+vars_model4j <- c("dep_score", "text_wend", "text_week", "tv_wend", "tv_week",
+                  "comp_week", "comp_wend", "sex","anx_band_15",
+                  "mat_anx_0m","mat_anx_1","mat_anx_18m", "mat_anx_8m",
+                  "mat_dep", "mat_edu", "mat_ses", "iq", "pat_pres", 
+                  "pat_pres_10", "pat_pres_8", "num_home", "phys_cruel", "emot_cruel",
+                  "child_bull","fam_tv_aft", "fam_tv_eve", "fam_tv_mor",
+                  "musi_wend", "musi_week")
+
+vars_model4k <- c("dep_score", "text_wend", "text_week", "tv_wend", "tv_week",
+                  "comp_week", "comp_wend", "sex","anx_band_15",
+                  "mat_anx_0m","mat_anx_1","mat_anx_18m", "mat_anx_8m",
+                  "mat_dep", "mat_edu", "mat_ses", "iq", "pat_pres", 
+                  "pat_pres_10", "pat_pres_8", "num_home", "phys_cruel", "emot_cruel",
+                  "child_bull","fam_tv_aft", "fam_tv_eve", "fam_tv_mor",
+                  "talk_mob_week", "talk_mob_wend")
+
+
+vars_model4l <- c("dep_score", "text_wend", "text_week", "tv_wend", "tv_week",
+                  "comp_week", "comp_wend", "sex","anx_band_15",
+                  "mat_anx_0m","mat_anx_1","mat_anx_18m", "mat_anx_8m",
+                  "mat_dep", "mat_edu", "mat_ses", "iq", "pat_pres", 
+                  "pat_pres_10", "pat_pres_8", "num_home", "phys_cruel", "emot_cruel",
+                  "child_bull","fam_tv_aft", "fam_tv_eve", "fam_tv_mor",
+                  "talk_phon_week", "talk_phon_wend")
+
+```
+
+```{r}
+all_model_vars <- list(vars_model1 = vars_model1, vars_model2 = vars_model2,
+                       vars_model3 = vars_model3,  vars_model4a = vars_model4a,
+                       vars_model4b = vars_model4b,
+                       vars_model4c = vars_model4c, vars_model4d = vars_model4d,
+                       vars_model4e = vars_model4e, vars_model4f = vars_model4f,
+                       vars_model4g = vars_model4g, vars_model4h = vars_model4h,
+                       vars_model4i = vars_model4i, vars_model4j = vars_model4j,
+                       vars_model4k = vars_model4k, vars_model4l = vars_model4l)
+
+map_df(all_model_vars, filter.NA.fun, df = orig_dat) %>%
+  add_column(model = names(all_model_vars)) %>% 
+  kableExtra::kable() %>% kableExtra::kable_styling(bootstrap_options = c("striped"))
+
+```
+
+
 
 ### Exploring the missings
-
-
-
-
-
-```{r}
-dat %>% naniar::vis_miss()
-
-```
-
-```{r}
-dat %>% visdat::vis_dat()
-
-```
-
-```{r}
-dat %>% naniar::gg_miss_var(show_pct = TRUE, facet = sex)
-
-```
-
-```{r}
-dat %>% naniar::gg_miss_span(ICD_Depression_Diagnosis_17.5, span_every = 1000) + labs(title = "Number of missing ICD Depression Diagnosis")
-
-```
 
 
