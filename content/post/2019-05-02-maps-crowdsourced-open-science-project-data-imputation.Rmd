@@ -1,0 +1,16 @@
+---
+title: 'MAPS Crowdsourced Open Science Project: Data Imputation'
+author: "Corey Pembleton"
+date: '2019-05-02'
+slug: maps-crowdsourced-open-science-project-data-imputation
+categories: ["R"]
+tags: ["data cleaning"]
+keywords: ["tech"]
+draft: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+
+```
