@@ -19,7 +19,6 @@ library(naniar)
 
 ```
 
-
 My colleagues and I here at [OpenNorth](https://opennorth.ca) are contributing to a very interesting crowd-sourcing data analysis project out of the University of Bristol's Jean Golding Institute, *mapping the analytical paths of a crowdsourced data analysis*, or [MAPS](https://jean-golding-institute.github.io/maps/).
 
 
