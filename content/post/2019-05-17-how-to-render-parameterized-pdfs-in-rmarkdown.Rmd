@@ -1,0 +1,168 @@
+---
+title: "How to render parameterized pdfs in rmarkdown" 
+author: "Corey Pembleton"
+date: '2019-05-19'
+output: html_document
+slug: how-to-render-parameterized-pdfs-in-rmarkdown
+categories: ["R", "Tutorial"]
+tags: ["purrr", "tidyverse", "kableExtra", "pandoc", "knitr"]
+keywords: ["tech", "R", "rmarkdown", "LaTeX", "pandoc"]
+thumbnailImagePosition: "right"
+thumbnailImage: "/img/hex-rmarkdown.png"
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+Making (PDF) reports iteratively using R is something I've wanted to learn to do for some time. In most cases, clients, colleagues, and managers don't want html files, they want a single, succinct document which is consistently formatted and branded. After running into several roadblocks trying to create an iterative report, I decided to compile the various stackoverflow posts and blogs into one post here going over the basics of ```rmarkdown::render()```, LaTeX, and ```purrr::pmap()```.
+
+Some key things before starting:  
+
+1. Have a good sense of your working directory: There will be multiple moving parts here, an r script, an rmd script / template, images for the pdf, and .tex templates - it's a good idea to have a strong grip of all these elements.
+2. Spend some time getting to know markdown, pandoc, LaTeX: RStudio makes it very easy to make beautiful things, so until now I haven't had to learn about them in detail. [This post](https://stackoverflow.com/questions/40563479/relationship-between-r-markdown-knitr-pandoc-and-bookdown) gives a good idea as to what's going on in the background. 
+3. The YAML header is very sensitive! Everything has to be in it's place, if not, things won't run. Using the ```rmarkdown::render()``` requires a few other steps to be in place in your YAML before it render everything how you want it.
+
+## Setting the styles straight using LaTeX  
+
+Before getting into the iterative functionality of rendering in rmarkdown, it's helpful to have a "template" .Rmd in place first. There are many ways to do this, but I found adding LaTeX right into the YAML header easiest. 
+
+**Tables with KableExtra for LaTeX**  
+KableExtra is (IMO) the simplest, most consistent, and best looking table development package for html table creation in rmarkdown. To use it with PDFs, a few extra steps are needed.
+
+First, in the code-chunk: it's pretty much the same as when creating html tables, with the difference of needing to ensure you set the type to "latex", and for text-heavy columns you'll need to specifiy the column width with ```column_spec()```, else the column text will run over the page's width.
+
+For more details on this formatting tables in LaTeX / KableExtra, check this sister reference document to the html version of KableExtra for html tables, Hao Zhu has created a very detailed ["Create Awesome LaTeX Tables with KableExtra(pdf)"](http://haozhu233.github.io/kableExtra/awesome_table_in_pdf.pdf). 
+
+```{r, echo=TRUE, eval=FALSE}
+library(kableExtra)
+
+kable(table, "latex", booktabs = TRUE) %>% 
+  kable_styling(latex_options = "striped") %>% 
+  column_spec(1, bold = T) %>% 
+  column_spec(2, width = "50em", border_left = T)
+```
+
+Second, in order for the table to be visible, you'll need to adjust the YAML further, directly adding the necessary LaTeX table packages under  ```header-includes```:
+
+```{r, eval=FALSE}
+---
+header-includes:
+- \usepackage{booktabs}
+- \usepackage{longtable}
+- \usepackage{array}
+- \usepackage{multirow}
+- \usepackage[table]{xcolor}
+- \usepackage{wrapfig}
+- \usepackage{float}
+- \usepackage{colortbl}
+- \usepackage{pdflscape}
+- \usepackage{tabu}
+- \usepackage{threeparttable}
+- \usepackage[normalem]{ulem}
+- \usepackage{fancyhdr}
+- \usepackage{graphicx}
+- \usepackage{eurosym}
+- \usepackage{booktabs,xcolor} 
+---
+```
+
+**Adding header and footer images**  
+
+A last style point is adding images into the headers and footers. I've used two LaTeX packages for this, ```\fancyhdr``` and ```\wallpaper```. I still haven't worked out how to format the images perfectly, but more or less you link the header/footer images and their setting in the YAML as well under ```header-includes```:
+
+```{r, eval=FALSE}
+---
+header-includes:
+- \addtolength{\headheight}{1.50cm}
+- \rhead{Community Solutions Network One-to-One Advisory Service - \today} 
+- \lhead{\includegraphics[width=4cm]{logo_h.jpg}} 
+- \setlength\footskip{5pt}
+- \LRCornerWallPaper{.50}{footer_logo.jpg}
+- \fancypagestyle{plain}{\pagestyle{fancy}}
+---
+```
+
+
+## Creating custom reports iteratively  
+
+Now that the template document is structured to produce tables with a bit of header/footer formatting, the next step is creating multiple reports using the template.
+
+### Setting up a parameterized Rmarkdown template
+
+Setting parameters in an RMarkdown is a way of referencing a file or dataset once in the YAML so the text within the script doesn't need to change every time, just the param reference.
+
+For example, here I have two parameters set, one which inserts images from another directory, and another which is a call to a dataset:
+
+```{r, eval = FALSE}
+
+---
+title: "Title"
+mainfont: Arial
+output:
+    pdf_document:
+      latex_engine: xelatex
+      fig_caption: false
+      fig_height: 4
+geometry: margin=.5in
+params:
+    images_params: !r list.files(path = "./images/", pattern = "\\.jpg$", full.names = TRUE)
+    data: mtcars
+---
+
+```
+
+Under ```params:``` setting, !r is used for inline r code within the YAML.
+For more information on what YAML settings are availale with ```pdf_output```, check [this rmarkdown guide (pdf)](www.rstudio.com%2Fwp-content%2Fuploads%2F2015%2F03%2Frmarkdown-reference.pdf).  
+
+
+Using parameters in the .Rmd is done by calling params$. within r functions
+
+```{r, eval = FALSE}
+
+#to include the images from the directory:
+knitr::include_graphics(params$images_params)
+
+#calling the dataset directly
+
+head(params$data, n = 10)
+```
+
+The first ```include_graphics()``` call isn't very useful in its current state for inserting a single image, as it will insert all images within the directory (or whatever line of code is here), but that will come useful later when we need to iterate.
+
+## Setting up the R script  
+
+Once the .Rmd is ready to go, the <20 lines of r script can be written which will do iteration leg work. I've copied it pretty much line for line from [this](https://medium.com/@urban_institute/iterated-fact-sheets-with-r-markdown-d685eb4eafce) helpful script provided by the Urban Institute.
+
+```{r}
+library(tidyverse)
+path <- tools::file_path_sans_ext(
+  list.files(path = "./images/",
+             pattern = "\\.jpg$",
+             full.names = F))
+
+images_params <- list.files(path = "./images/",
+                            pattern = "\\.jpg$", 
+                            full.names = T)
+reports <- tibble(
+  output_file = stringr::str_c("score_card_email/", path, ".pdf"),
+  params = map(images_params, ~list(images_params = .))
+)
+
+#not sure if setting the envir = new.env() is needed, but some feedback on SO gave this solution
+reports %>% pwalk(rmarkdown::render, 
+                  input = "./Scripts/08 - Questionnaire_Results_Email_Attachment.Rmd",
+                  "pdf_document", envir = new.env())
+```
+
+What the ```pwalk()``` call with ```render()```  does is renders a new PDF for each item in params list in the dataframe. Pretty easy!
+
+
+
+
+
+
+
+
+
+
