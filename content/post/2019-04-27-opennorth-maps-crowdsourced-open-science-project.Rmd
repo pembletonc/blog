@@ -5,10 +5,8 @@ date: '2019-04-27'
 output: html_document
 slug: opennorth-maps-crowdsourced-open-science-project
 categories: [ "R", "dataexploration"]
-tags: ["data cleaning", "statistics"]
-thumbnailImagePosition: "left"
-thumbnailImage: ""
-draft: true 
+tags: ["data cleaning", "statistics", "crowdsourcing"]
+keywords: ["tech", "R", "rmarkdown", "opendata"]
 ---
 
 ```{r setup, include=FALSE}
@@ -28,9 +26,9 @@ blogdown::shortcode("tweet","1110577479507431425")
 
 ```
 
-The MAPS study is largely a "[Many Analysts](https://journals.sagepub.com/doi/10.1177/2515245917747646)" study wherein many teams of analysts use the same data set to answer the same question seen in the tweet above. 
+The MAPS study is largely a [Many Analysts](https://journals.sagepub.com/doi/10.1177/2515245917747646) study wherein many teams of analysts use the same data set to answer the same question seen in the tweet above. 
 
-They've armed every analyst team with a data set, given full access to the original research piece answering the same question, detailed instructions, all accessible in a Open Science Framework page.
+They've armed every analyst team with a dataset, given full access to the original research piece answering the same question, detailed instructions, and other resources on an Open Science Framework page.
 
 The MAPS project has several research questions is seeks to answer, the primary questions are concerned with replicability and comparability between the Many Analysts:
 
@@ -42,38 +40,19 @@ The MAPS project has several research questions is seeks to answer, the primary 
 
 And the secondary questions are more focused on how the experiences of the Many Analysts impacts their results:
 
-
 **Secondary project questions to be answered will be**:  
 5. Does domain expertise affect the results of teams’ analyses?  
 6. Does statistical expertise affect the results of teams’ analyses?  
 7. Are teams’ subjective beliefs about the research question associated with the results of teams’ analyses?  
 8. Does the anonymisation process affect the results of teams' analyses?  
 
+While the OpenNorth team is less concerned with the research questions of the MAPs analysis itself, and will focus on performing out replicable analysis, we will still be keeping their questions in mind to be able to contribute as meaningfully as possible.
 
+### Approach
 
+Generally speaking, the team has agreed to an approach which will allow us to contribute to the MAPS project and learn some new tricks along the way. We plan to break the work up in several stages: first, understanding the data and the approach used by the authors. Second, we want to explore further the iteration approach used to complete the dataset, and review how that will impact out results using a slightly different synthetic dataset. Third, we will complete our own research to better understand the ways which the variables (screen time) have been studied by other researchers, and begin developing an alternative hypothesis to test.
 
-
-
-### Synthetic dataset based upon real dataset used, the Avon Longitudinal Study of Parents and Children (ALSPAC)
-
-
-
-
-
-
-
-Importantly, we also attempted to adjust for a range of other activities in
-order to identify what other activities are sacrificed for screen time. Such measures include time spent outside, time spent socialising, and time spent alone
-
-
-
-"Anxiety and depression were measured at approximately 18 years, using a self-administered, computerised version of the revised Clinical Interview Schedule (CIS-R) [18]
-completed during a study clinic. The CIS-R asks questions about a range of symptoms and can be used to assign ICD-10 diagnoses of depression and anxiety disorders"
-
-
-"In summary, our results suggest that increased computer use at age 16 is associated with an increased risk of depression and anxiety at age 18, although causality cannot be ascertained. After adjustment for potential confounders, there was little evidence of an effect of time spent texting or watching TV on risk of anxiety and depression indicating there may be a more complex relationship between screen time and mental health outcomes than simply more screen time increasing risk."
-
-
+A challenge in volunteering to participate in a research project of this nature is being able to strike the balance between completing meaningful research, ensuring the entire team learns something new along the way, and working within a short time frame (for free). I'm excited to get started on the project, to meet the other researchers involved, to learn new statistical analysis approaches, and hopefully make some beautiful visualizations out of this interesting opportunity in shared science.
 
 
 
