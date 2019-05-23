@@ -3,10 +3,13 @@ title: 'MAPS Crowdsourced Open Science Project: Data Imputation'
 author: "Corey Pembleton"
 date: '2019-05-20'
 slug: maps-crowdsourced-open-science-project-data-imputation
-categories: ["R", "hmisc", "mice"]
+categories: ["R"]
 tags: ["data cleaning", "statistics", "tutorial"]
 keywords: ["R", "Programming", "statistics"]
 draft: true
+thumbnailImagePosition: left
+thumbnailImage: /img/cover_img.png
+coverImage: /img/cover_img.png
 ---
 
 ```{r setup, include=FALSE}
@@ -15,48 +18,105 @@ library(tidyverse)
 
 ```
 
-Missing data can cause a compromise in inferences made from clinicial trials, and the mechanism (or reason) why the data is missing in the first place implicates whether or not an analytic method can be used to correct that missingness, normally through imputation. There are risks to using analytic methods to impute missing values, such as creating a bias by imputing unavoidably missing data, and not understanding the mechanism by which data can be missing. There are three mechanisms which can cause missing data, it can be: missing completely at random (MCAR) missing at random (MAR), or and missing not at random (MNAR) [Jakobsen, Gluud, Wetterslev & Winkel (2017)](https://rdcu.be/bDwVn). 
+Missing data can cause a compromise in inferences made from clinicial trials, and the mechanism (or reason) why the data is missing in the first place implicates whether or not an analytic method can be used to correct that missingness at all. There are three mechanisms which can cause missing data: missing completely at random (MCAR) missing at random (MAR), or and missing not at random (MNAR) [Jakobsen, Gluud, Wetterslev & Winkel (2017)](https://rdcu.be/bDwVn).  
 
-I won't go into detail of each (check the cited paper), but will focus on the mechanism attributed by authors for missing data in this study. 
-
-On this, the authors test whether the data is MNAR, and flag that:  
-
-> Both anxiety and depression measured at age 7years were associated with non-response at age 18 (results not shown): individuals with evidence of anxiety and depression at age 7 were more likely to have missing outcome data at age 18, suggesting that the outcomes could be MNAR, or MAR conditional on anxiety and depression at age 7 (we acknowledge that this cannot be determined from the observed data). (pg 4, Khouja et. al (2019))
-
-And thus, the authors chose to use multiple imputation (MI) to fill the data gaps present. After exploring the missing (and present) values of the synthetic ALSPAC dataset in a [previous post](https://data-break.netlify.com/2019/04/crowdsourced-open-science-project-data-exploration/), here I'm to explore different analytic approaches for replacing missing values, both as an exercise in learning new R packages as well as understanding what would be most appropriate for this analysis.
-
-![Imputation isn't always a smooth process](/img/comic.jpg)
-
-While I'm operating under the assumption that the method used by the authors is an acceptable method, I would like to understand data imputation in R (which I have never done before), and how different methods can impact future analysis differently. 
+There are risks to using analytic methods to impute missing values, such as creating a bias by imputing unavoidably missing data, and not understanding the mechanism by which data can be missing. 
 
 
-## Commonly Used Data Imputation Packages in R  
+```{r, echo=FALSE, out.width="20%", out.height="20%", fig.align='centre', out.extra='style="padding:10px"', fig.cap="Imputation isn't always a smooth process"}
+
+knitr::include_graphics("/img/comic.jpg")
+```
+
+
+I won't go into detail of each mechanism (check the cited paper above), but rather will focus on the mechanism attributed by authors for missing data in this study, which the authors note as possibly being MNAR or conditionally MAR, and selecting multiple imputation (MI) as the analytic method to replace missing values.  
+
+> "Both anxiety and depression measured at age 7years were associated with non-response at age 18 (results not shown): individuals with evidence of anxiety and depression at age 7 were more likely to have missing outcome data at age 18, suggesting that the outcomes could be MNAR, or MAR conditional on anxiety and depression at age 7 (we acknowledge that this cannot be determined from the observed data)." (p. 4, Khouja et. al (2019))
+
+## When is it acceptable to impute missing values?  
+While I'm operating under the assumption that the method used by the authors is  acceptable, I would like to understand data imputation in R further (I have never worked with it before), and learn how different methods can impact future analysis differently.     
+
+According to this flow chart created following a meta review of data imputation used in clinical trials, several of the conditions for using multiple imputation are questionable, although passable: that there is too large a proportion of the data missing (only 12.7% of cases are complete) and that an MNAR assumption is possible, although conditionally.
+
+
+```{r, echo=FALSE, out.width="50%", fig.align='centre', out.extra='style="padding:10px"', fig.cap="Source: Jakobsen, Gluud, Wetterslev & Winkel (2017)"}
+
+knitr::include_graphics("/img/imputation_flowchart.gif")
+```
+
+
+## How to impute missing values: commonly used imputation approaches and  packages in R  
+
+### Methods uses in academic literature for imputation
+
+- Complete case analysis: Complete case analysis is statistical analysis based on participates with a complete set of outcome data. Participants with any missing data are excluded from analysis.  
+
+- Single Imputation: When using single imputation, missing values are replaced by a value defined by a certain rule, e.g. simple mean imputation, or last value carried forward.  
+
+- Multiple Imputation: Multiple imputation has been shown to be a valid general method for handling missing data in randomised clinical trials, and this method is available for most types of data.  
+
 ```{r, echo=FALSE, out.width="15%", fig.align='right', out.extra='style="float:right; padding:10px"'}
 
 knitr::include_graphics("/img/comic2.gif")
 ```
 
-After reviewing several blog posts e.g. [KDnuggets](Proportional odds model - suitable for ordered categorical variables with more than or equal to two levels ); [Analytics Vidhya](https://www.analyticsvidhya.com/blog/2016/03/tutorial-powerful-packages-imputing-missing-values/); and ___ , I've decided to review some of the mainstay popular packages used in R for data imputation.  
 
-Each imputation package offers specific advantages, has underlying assumptions that must be understood (and respected)  
+### R packages commonly used for imputation
+After reviewing several blog posts e.g. [KDnuggets](https://www.kdnuggets.com/2017/09/missing-data-imputation-using-r.html); [Analytics Vidhya](https://www.analyticsvidhya.com/blog/2016/03/tutorial-powerful-packages-imputing-missing-values/), I've decided to review some of the mainstay popular packages used in R for data imputation.  
+
+Each imputation package offers specific advantages, has underlying assumptions that must be understood, and requires an understanding of what data types can be imputed. While I'd like to explore all of these packages, I'd like to look closer at three in particular: ```mice```, ```hmisc```, and ```missforest```. 
+
+#### mice  
+
+[Multivariate Imputation by Chained Equations](https://stefvanbuuren.name/mice/) package, developed by Stef van Buuren and Karin Groothuis-Oudshoorn.
+
+```{r, cache=TRUE, error=FALSE, warning=FALSE, message=FALSE}
+
+#will use a smaller version of the dataset with first 1,000 rows
+orig_dat <- read_csv("https://raw.githubusercontent.com/pembletonc/OpenNorth_MAPS/master/maps-synthetic-data.csv") %>% rename(ID = X1)
+
+vars_model1 <- c("dep_score", "text_wend", "text_week", "tv_wend", "tv_week",
+          "comp_week", "comp_wend")
+
+small_dat <- orig_dat %>% select(one_of("ID", vars_model1)) %>% head(1000)
+
+
+```
+
+```{r, error=FALSE, warning=FALSE, message=FALSE}
+library(mice)
+
+#inspect missing values
+md.pattern(small_dat, plot=FALSE)
+
+#impute missing value of numeric value (dep_score)
+#note that nothing is imputed for ID as there are no missings
+
+imp <- small_dat %>% select(ID, dep_score) %>% mice(method = "mean", m=1, maxit=1)
+```
+
+```{r}
+head(complete(imp), 5) %>% 
+  kableExtra::kable() %>%
+  kableExtra::kable_styling(full_width = FALSE) 
+
+```
 
 
 
-  
 
-**MICE**
 
+
+
+#### hmisc
 Methods:
-- PMM (Predictive Mean Matching) - suitable for numeric variables 
-- logreg(Logistic Regression) - suitable for categorical variables with 2 levels
-- polyreg(Bayesian polytomous regression) - suitable for categorical variables with more than or equal to two levels 
-- Proportional odds model - suitable for ordered categorical variables with more than or equal to two levels 
 
-Assumptions:  
-- assumes Missing at random (MAR) values
+Assumptions:
 
 
-**Random Forests**
+#### missforest
+Methods:
+
 
 Assumptions:  
 - 
