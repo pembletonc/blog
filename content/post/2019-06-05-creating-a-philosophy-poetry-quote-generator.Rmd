@@ -1,0 +1,12 @@
+---
+title: Towards a philosophy-poetry quote generator
+author: Corey Pembleton
+date: '2019-06-05'
+slug: creating-a-philosophy-poetry-quote-generator
+categories: ["R"]
+tags: ["text generation"]
+keywords: ["tech"]
+draft: true
+---
+
+<!--more-->
