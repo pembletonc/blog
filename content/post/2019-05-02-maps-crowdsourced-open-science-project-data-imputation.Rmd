@@ -1,12 +1,11 @@
 ---
 title: 'MAPS Crowdsourced Open Science Project: Data Imputation'
 author: "Corey Pembleton"
-date: '2019-05-20'
+date: '2019-06-05'
 slug: maps-crowdsourced-open-science-project-data-imputation
 categories: ["R"]
 tags: ["data cleaning", "statistics", "tutorial"]
 keywords: ["R", "Programming", "statistics"]
-draft: true
 thumbnailImagePosition: left
 thumbnailImage: /img/cover_img.png
 coverImage: /img/cover_img.png
@@ -15,6 +14,7 @@ coverImage: /img/cover_img.png
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
+library(kableExtra)
 
 ```
 
@@ -61,10 +61,9 @@ knitr::include_graphics("/img/comic2.gif")
 ```
 
 
-### R packages commonly used for imputation
-After reviewing several blog posts e.g. [KDnuggets](https://www.kdnuggets.com/2017/09/missing-data-imputation-using-r.html); [Analytics Vidhya](https://www.analyticsvidhya.com/blog/2016/03/tutorial-powerful-packages-imputing-missing-values/), I've decided to review some of the mainstay popular packages used in R for data imputation.  
+### R packages commonly used for imputation  
+After reviewing several blog posts e.g. [KDnuggets](https://www.kdnuggets.com/2017/09/missing-data-imputation-using-r.html); [Analytics Vidhya](https://www.analyticsvidhya.com/blog/2016/03/tutorial-powerful-packages-imputing-missing-values/), I've decided to review one of the mainstaypackages used in R for data imputation, the ```mice``` package. In the future I would like to look closer at two other packages,```hmisc```, and ```missforest```.  
 
-Each imputation package offers specific advantages, has underlying assumptions that must be understood, and requires an understanding of what data types can be imputed. While I'd like to explore all of these packages, I'd like to look closer at three in particular: ```mice```, ```hmisc```, and ```missforest```. 
 
 #### mice  
 
@@ -80,47 +79,100 @@ vars_model1 <- c("dep_score", "text_wend", "text_week", "tv_wend", "tv_week",
 
 small_dat <- orig_dat %>% select(one_of("ID", vars_model1)) %>% head(1000)
 
+#restructure the dataset renaming the categorical variables:
+
+dat_1 <-  small_dat %>% mutate_at(vars(c(dep_score, text_wend, text_week, tv_wend, tv_week, comp_week, comp_wend)),
+                    list(cat = ~case_when(. %in% c("Not at all") ~ 0,
+                                          . %in% c("Less than 1 hour") ~ 1,
+                                          . %in% c("1-2 hours") ~2,
+                                          . %in% c("3 or more hours") ~3,
+                                          TRUE ~NA_real_))) %>% 
+  select(ID, dep_score, contains("cat"), -dep_score_cat) %>% 
+  mutate_at(c("dep_score", "text_wend_cat", "text_week_cat",
+              "tv_wend_cat", "tv_week_cat", "comp_week_cat", "comp_wend_cat"),
+            funs(factor(.)))
 
 ```
 
 ```{r, error=FALSE, warning=FALSE, message=FALSE}
 library(mice)
+#following the vignette offered, the process looks like this:
 
-#inspect missing values
-md.pattern(small_dat, plot=FALSE)
+ini <- mice(dat_1, maxit = 0)
+meth <- ini$meth
+meth
 
-#impute missing value of numeric value (dep_score)
-#note that nothing is imputed for ID as there are no missings
+#set the method for factor variables with >= 2 levels with polyreg(Bayesian polytomous regression)
+meth[3:8] <- "polyreg"
+meth
+pred <- ini$pred
+pred[, "dep_score"] <- 0
+pred[, "ID"] <- 0
 
-imp <- small_dat %>% select(ID, dep_score) %>% mice(method = "mean", m=1, maxit=1)
+```
+
+Setting the pred of certain variables to 0 indicates they won't be used as predictor variables and creates a "predictor matrix". In this case, ```ID``` and```dep_score``` won't be used as a variable to predict the missing values (dep_score will be included in the second iteration):
+
+```{r, echo=FALSE}
+pred %>% kable() %>% kable_styling(full_width = F, position = "center")
+```
+
+## Convergence and inference pooling
+
+In their [second vignette](https://www.gerkovink.com/miceVignettes/Convergence_pooling/Convergence_and_pooling.html), the authors of the ```mice``` package provide a description of how to pool results and "avoid pitfalls researchers may fall into". The authors write that "In general, we would like the streams to intermingle and be free of any trends at the later iterations.", so I'm going to try to achieve this as well.
+
+
+The mice function uses a Markov Chain Monte Carlo type of algorithm, and when reviewing the trace lines we can study convergence (here 5 iterations is used as the default minimum):
+
+```{r, cache=TRUE}
+#run the first imputation with the methods and predictor variables (currently none used)
+imp1 <- mice(dat_1, meth = meth, pred = pred, print = FALSE)
+
+plot(imp1, c("dep_score", "text_wend_cat","text_week_cat", "tv_wend_cat", "tv_week_cat"))
+
 ```
 
 ```{r}
-head(complete(imp), 5) %>% 
-  kableExtra::kable() %>%
-  kableExtra::kable_styling(full_width = FALSE) 
+#run second imputation, this time with depression_score as pred
+
+pred <- ini$pred
+pred[, "ID"] <- 0
+pred
+imp2 <- mice(dat_1, meth = meth, pred = pred, print = FALSE)
+
+plot(imp2, c("dep_score", "text_wend_cat","text_week_cat", "tv_wend_cat", "tv_week_cat"))
 
 ```
 
+A test for robustness can be increasing the amount of iterations on the imputation and comparing convergence, which is more convincing with more iterations (m = 20 here):
 
+```{r, cache=TRUE}
 
+imp3 <- mice.mids(imp2, maxit = 20, printFlag = FALSE)
 
+plot(imp3, c("dep_score", "text_wend_cat","text_week_cat", "tv_wend_cat", "tv_week_cat"))
 
+```
 
+It doesn't look like there is significant convergence, however it does look like some variables have patterns emerging, which I plan to look into further.
 
-#### hmisc
-Methods:
+Density plots comparing imputation against actual can help to measure approximate accuracy, here looking at a single variable:
 
-Assumptions:
+```{r}
+densityplot(imp2, ~text_week_cat)
+```
 
+As always, tabular results need to be examined as well:
+```{r}
+mice::complete(imp2, 1)[1:10,] %>%
+  kableExtra::kable() %>%
+  kable_styling(full_width = F, position = "center")
+```
 
-#### missforest
-Methods:
+Looks pretty good! There are more tests for robustness but in this little example, it has been interesting to learn how to use imputation on datasets (especially with categorical variables).  
 
-
-Assumptions:  
-- 
-
+I see that imputation is in itself a field of study, and I look forward to learning more about it.  
+I anticipate that once I begin comparing the full dataset to the imputed dataset, I'll gain a better understanding of how different imputation approaches can impact the data, and which will be best for the needs of this study.
 
 
 

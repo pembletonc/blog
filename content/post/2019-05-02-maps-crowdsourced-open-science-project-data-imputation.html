@@ -1,0 +1,711 @@
+---
+title: 'MAPS Crowdsourced Open Science Project: Data Imputation'
+author: "Corey Pembleton"
+date: '2019-06-05'
+slug: maps-crowdsourced-open-science-project-data-imputation
+categories: ["R"]
+tags: ["data cleaning", "statistics", "tutorial"]
+keywords: ["R", "Programming", "statistics"]
+thumbnailImagePosition: left
+thumbnailImage: /img/cover_img.png
+coverImage: /img/cover_img.png
+---
+
+<script src="/rmarkdown-libs/kePrint/kePrint.js"></script>
+
+
+<p>Missing data can cause a compromise in inferences made from clinicial trials, and the mechanism (or reason) why the data is missing in the first place implicates whether or not an analytic method can be used to correct that missingness at all. There are three mechanisms which can cause missing data: missing completely at random (MCAR) missing at random (MAR), or and missing not at random (MNAR) <a href="https://rdcu.be/bDwVn">Jakobsen, Gluud, Wetterslev &amp; Winkel (2017)</a>.</p>
+<p>There are risks to using analytic methods to impute missing values, such as creating a bias by imputing unavoidably missing data, and not understanding the mechanism by which data can be missing.</p>
+<div class="figure" style="text-align: centre"><span id="fig:unnamed-chunk-1"></span>
+<img src="/img/comic.jpg" alt="Imputation isn't always a smooth process" width="20%" height="20%" style="padding:10px" />
+<p class="caption">
+Figure 1: Imputation isn’t always a smooth process
+</p>
+</div>
+<p>I won’t go into detail of each mechanism (check the cited paper above), but rather will focus on the mechanism attributed by authors for missing data in this study, which the authors note as possibly being MNAR or conditionally MAR, and selecting multiple imputation (MI) as the analytic method to replace missing values.</p>
+<blockquote>
+<p>“Both anxiety and depression measured at age 7years were associated with non-response at age 18 (results not shown): individuals with evidence of anxiety and depression at age 7 were more likely to have missing outcome data at age 18, suggesting that the outcomes could be MNAR, or MAR conditional on anxiety and depression at age 7 (we acknowledge that this cannot be determined from the observed data).” (p. 4, Khouja et. al (2019))</p>
+</blockquote>
+<div id="when-is-it-acceptable-to-impute-missing-values" class="section level2">
+<h2>When is it acceptable to impute missing values?</h2>
+<p>While I’m operating under the assumption that the method used by the authors is acceptable, I would like to understand data imputation in R further (I have never worked with it before), and learn how different methods can impact future analysis differently.</p>
+<p>According to this flow chart created following a meta review of data imputation used in clinical trials, several of the conditions for using multiple imputation are questionable, although passable: that there is too large a proportion of the data missing (only 12.7% of cases are complete) and that an MNAR assumption is possible, although conditionally.</p>
+<div class="figure" style="text-align: centre"><span id="fig:unnamed-chunk-2"></span>
+<img src="/img/imputation_flowchart.gif" alt="Source: Jakobsen, Gluud, Wetterslev &amp; Winkel (2017)" width="50%" style="padding:10px" />
+<p class="caption">
+Figure 2: Source: Jakobsen, Gluud, Wetterslev &amp; Winkel (2017)
+</p>
+</div>
+</div>
+<div id="how-to-impute-missing-values-commonly-used-imputation-approaches-and-packages-in-r" class="section level2">
+<h2>How to impute missing values: commonly used imputation approaches and packages in R</h2>
+<div id="methods-uses-in-academic-literature-for-imputation" class="section level3">
+<h3>Methods uses in academic literature for imputation</h3>
+<ul>
+<li><p>Complete case analysis: Complete case analysis is statistical analysis based on participates with a complete set of outcome data. Participants with any missing data are excluded from analysis.</p></li>
+<li><p>Single Imputation: When using single imputation, missing values are replaced by a value defined by a certain rule, e.g. simple mean imputation, or last value carried forward.</p></li>
+<li><p>Multiple Imputation: Multiple imputation has been shown to be a valid general method for handling missing data in randomised clinical trials, and this method is available for most types of data.</p></li>
+</ul>
+<p><img src="/img/comic2.gif" width="15%" style="float:right; padding:10px" style="display: block; margin: auto 0 auto auto;" /></p>
+</div>
+<div id="r-packages-commonly-used-for-imputation" class="section level3">
+<h3>R packages commonly used for imputation</h3>
+<p>After reviewing several blog posts e.g. <a href="https://www.kdnuggets.com/2017/09/missing-data-imputation-using-r.html">KDnuggets</a>; <a href="https://www.analyticsvidhya.com/blog/2016/03/tutorial-powerful-packages-imputing-missing-values/">Analytics Vidhya</a>, I’ve decided to review one of the mainstaypackages used in R for data imputation, the <code>mice</code> package. In the future I would like to look closer at two other packages,<code>hmisc</code>, and <code>missforest</code>.</p>
+<div id="mice" class="section level4">
+<h4>mice</h4>
+<p><a href="https://stefvanbuuren.name/mice/">Multivariate Imputation by Chained Equations</a> package, developed by Stef van Buuren and Karin Groothuis-Oudshoorn.</p>
+<pre class="r"><code>#will use a smaller version of the dataset with first 1,000 rows
+orig_dat &lt;- read_csv(&quot;https://raw.githubusercontent.com/pembletonc/OpenNorth_MAPS/master/maps-synthetic-data.csv&quot;) %&gt;% rename(ID = X1)
+
+vars_model1 &lt;- c(&quot;dep_score&quot;, &quot;text_wend&quot;, &quot;text_week&quot;, &quot;tv_wend&quot;, &quot;tv_week&quot;,
+          &quot;comp_week&quot;, &quot;comp_wend&quot;)
+
+small_dat &lt;- orig_dat %&gt;% select(one_of(&quot;ID&quot;, vars_model1)) %&gt;% head(1000)
+
+#restructure the dataset renaming the categorical variables:
+
+dat_1 &lt;-  small_dat %&gt;% mutate_at(vars(c(dep_score, text_wend, text_week, tv_wend, tv_week, comp_week, comp_wend)),
+                    list(cat = ~case_when(. %in% c(&quot;Not at all&quot;) ~ 0,
+                                          . %in% c(&quot;Less than 1 hour&quot;) ~ 1,
+                                          . %in% c(&quot;1-2 hours&quot;) ~2,
+                                          . %in% c(&quot;3 or more hours&quot;) ~3,
+                                          TRUE ~NA_real_))) %&gt;% 
+  select(ID, dep_score, contains(&quot;cat&quot;), -dep_score_cat) %&gt;% 
+  mutate_at(c(&quot;dep_score&quot;, &quot;text_wend_cat&quot;, &quot;text_week_cat&quot;,
+              &quot;tv_wend_cat&quot;, &quot;tv_week_cat&quot;, &quot;comp_week_cat&quot;, &quot;comp_wend_cat&quot;),
+            funs(factor(.)))</code></pre>
+<pre class="r"><code>library(mice)
+#following the vignette offered, the process looks like this:
+
+ini &lt;- mice(dat_1, maxit = 0)
+meth &lt;- ini$meth
+meth</code></pre>
+<pre><code>##            ID     dep_score text_wend_cat text_week_cat   tv_wend_cat 
+##            &quot;&quot;     &quot;polyreg&quot;     &quot;polyreg&quot;     &quot;polyreg&quot;     &quot;polyreg&quot; 
+##   tv_week_cat comp_week_cat comp_wend_cat 
+##     &quot;polyreg&quot;     &quot;polyreg&quot;     &quot;polyreg&quot;</code></pre>
+<pre class="r"><code>#set the method for factor variables with &gt;= 2 levels with polyreg(Bayesian polytomous regression)
+meth[3:8] &lt;- &quot;polyreg&quot;
+meth</code></pre>
+<pre><code>##            ID     dep_score text_wend_cat text_week_cat   tv_wend_cat 
+##            &quot;&quot;     &quot;polyreg&quot;     &quot;polyreg&quot;     &quot;polyreg&quot;     &quot;polyreg&quot; 
+##   tv_week_cat comp_week_cat comp_wend_cat 
+##     &quot;polyreg&quot;     &quot;polyreg&quot;     &quot;polyreg&quot;</code></pre>
+<pre class="r"><code>pred &lt;- ini$pred
+pred[, &quot;dep_score&quot;] &lt;- 0
+pred[, &quot;ID&quot;] &lt;- 0</code></pre>
+<p>Setting the pred of certain variables to 0 indicates they won’t be used as predictor variables and creates a “predictor matrix”. In this case, <code>ID</code> and<code>dep_score</code> won’t be used as a variable to predict the missing values (dep_score will be included in the second iteration):</p>
+<table class="table" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:left;">
+</th>
+<th style="text-align:right;">
+ID
+</th>
+<th style="text-align:right;">
+dep_score
+</th>
+<th style="text-align:right;">
+text_wend_cat
+</th>
+<th style="text-align:right;">
+text_week_cat
+</th>
+<th style="text-align:right;">
+tv_wend_cat
+</th>
+<th style="text-align:right;">
+tv_week_cat
+</th>
+<th style="text-align:right;">
+comp_week_cat
+</th>
+<th style="text-align:right;">
+comp_wend_cat
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+ID
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+1
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+dep_score
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+1
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+text_wend_cat
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+1
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+text_week_cat
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+1
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+tv_wend_cat
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+1
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+tv_week_cat
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+1
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+comp_week_cat
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+1
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+comp_wend_cat
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+0
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div id="convergence-and-inference-pooling" class="section level2">
+<h2>Convergence and inference pooling</h2>
+<p>In their <a href="https://www.gerkovink.com/miceVignettes/Convergence_pooling/Convergence_and_pooling.html">second vignette</a>, the authors of the <code>mice</code> package provide a description of how to pool results and “avoid pitfalls researchers may fall into”. The authors write that “In general, we would like the streams to intermingle and be free of any trends at the later iterations.”, so I’m going to try to achieve this as well.</p>
+<p>The mice function uses a Markov Chain Monte Carlo type of algorithm, and when reviewing the trace lines we can study convergence (here 5 iterations is used as the default minimum):</p>
+<pre class="r"><code>#run the first imputation with the methods and predictor variables (currently none used)
+imp1 &lt;- mice(dat_1, meth = meth, pred = pred, print = FALSE)
+
+plot(imp1, c(&quot;dep_score&quot;, &quot;text_wend_cat&quot;,&quot;text_week_cat&quot;, &quot;tv_wend_cat&quot;, &quot;tv_week_cat&quot;))</code></pre>
+<p><img src="/post/2019-05-02-maps-crowdsourced-open-science-project-data-imputation_files/figure-html/unnamed-chunk-7-1.png" width="672" /><img src="/post/2019-05-02-maps-crowdsourced-open-science-project-data-imputation_files/figure-html/unnamed-chunk-7-2.png" width="672" /></p>
+<pre class="r"><code>#run second imputation, this time with depression_score as pred
+
+pred &lt;- ini$pred
+pred[, &quot;ID&quot;] &lt;- 0
+pred</code></pre>
+<pre><code>##               ID dep_score text_wend_cat text_week_cat tv_wend_cat
+## ID             0         1             1             1           1
+## dep_score      0         0             1             1           1
+## text_wend_cat  0         1             0             1           1
+## text_week_cat  0         1             1             0           1
+## tv_wend_cat    0         1             1             1           0
+## tv_week_cat    0         1             1             1           1
+## comp_week_cat  0         1             1             1           1
+## comp_wend_cat  0         1             1             1           1
+##               tv_week_cat comp_week_cat comp_wend_cat
+## ID                      1             1             1
+## dep_score               1             1             1
+## text_wend_cat           1             1             1
+## text_week_cat           1             1             1
+## tv_wend_cat             1             1             1
+## tv_week_cat             0             1             1
+## comp_week_cat           1             0             1
+## comp_wend_cat           1             1             0</code></pre>
+<pre class="r"><code>imp2 &lt;- mice(dat_1, meth = meth, pred = pred, print = FALSE)
+
+plot(imp2, c(&quot;dep_score&quot;, &quot;text_wend_cat&quot;,&quot;text_week_cat&quot;, &quot;tv_wend_cat&quot;, &quot;tv_week_cat&quot;))</code></pre>
+<p><img src="/post/2019-05-02-maps-crowdsourced-open-science-project-data-imputation_files/figure-html/unnamed-chunk-8-1.png" width="672" /><img src="/post/2019-05-02-maps-crowdsourced-open-science-project-data-imputation_files/figure-html/unnamed-chunk-8-2.png" width="672" /></p>
+<p>A test for robustness can be increasing the amount of iterations on the imputation and comparing convergence, which is more convincing with more iterations (m = 20 here):</p>
+<pre class="r"><code>imp3 &lt;- mice.mids(imp2, maxit = 20, printFlag = FALSE)
+
+plot(imp3, c(&quot;dep_score&quot;, &quot;text_wend_cat&quot;,&quot;text_week_cat&quot;, &quot;tv_wend_cat&quot;, &quot;tv_week_cat&quot;))</code></pre>
+<p><img src="/post/2019-05-02-maps-crowdsourced-open-science-project-data-imputation_files/figure-html/unnamed-chunk-9-1.png" width="672" /><img src="/post/2019-05-02-maps-crowdsourced-open-science-project-data-imputation_files/figure-html/unnamed-chunk-9-2.png" width="672" /></p>
+<p>It doesn’t look like there is significant convergence, however it does look like some variables have patterns emerging, which I plan to look into further.</p>
+<p>Density plots comparing imputation against actual can help to measure approximate accuracy, here looking at a single variable:</p>
+<pre class="r"><code>densityplot(imp2, ~text_week_cat)</code></pre>
+<p><img src="/post/2019-05-02-maps-crowdsourced-open-science-project-data-imputation_files/figure-html/unnamed-chunk-10-1.png" width="672" /></p>
+<p>As always, tabular results need to be examined as well:</p>
+<pre class="r"><code>mice::complete(imp2, 1)[1:10,] %&gt;%
+  kableExtra::kable() %&gt;%
+  kable_styling(full_width = F, position = &quot;center&quot;)</code></pre>
+<table class="table" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:right;">
+ID
+</th>
+<th style="text-align:left;">
+dep_score
+</th>
+<th style="text-align:left;">
+text_wend_cat
+</th>
+<th style="text-align:left;">
+text_week_cat
+</th>
+<th style="text-align:left;">
+tv_wend_cat
+</th>
+<th style="text-align:left;">
+tv_week_cat
+</th>
+<th style="text-align:left;">
+comp_week_cat
+</th>
+<th style="text-align:left;">
+comp_wend_cat
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:left;">
+0
+</td>
+<td style="text-align:left;">
+1
+</td>
+<td style="text-align:left;">
+1
+</td>
+<td style="text-align:left;">
+2
+</td>
+<td style="text-align:left;">
+2
+</td>
+<td style="text-align:left;">
+2
+</td>
+<td style="text-align:left;">
+2
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+2
+</td>
+<td style="text-align:left;">
+3
+</td>
+<td style="text-align:left;">
+2
+</td>
+<td style="text-align:left;">
+3
+</td>
+<td style="text-align:left;">
+3
+</td>
+<td style="text-align:left;">
+3
+</td>
+<td style="text-align:left;">
+2
+</td>
+<td style="text-align:left;">
+1
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+3
+</td>
+<td style="text-align:left;">
+1
+</td>
+<td style="text-align:left;">
+3
+</td>
+<td style="text-align:left;">
+3
+</td>
+<td style="text-align:left;">
+1
+</td>
+<td style="text-align:left;">
+2
+</td>
+<td style="text-align:left;">
+2
+</td>
+<td style="text-align:left;">
+1
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+4
+</td>
+<td style="text-align:left;">
+0
+</td>
+<td style="text-align:left;">
+2
+</td>
+<td style="text-align:left;">
+2
+</td>
+<td style="text-align:left;">
+1
+</td>
+<td style="text-align:left;">
+1
+</td>
+<td style="text-align:left;">
+2
+</td>
+<td style="text-align:left;">
+3
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+5
+</td>
+<td style="text-align:left;">
+2
+</td>
+<td style="text-align:left;">
+0
+</td>
+<td style="text-align:left;">
+0
+</td>
+<td style="text-align:left;">
+3
+</td>
+<td style="text-align:left;">
+2
+</td>
+<td style="text-align:left;">
+2
+</td>
+<td style="text-align:left;">
+1
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+6
+</td>
+<td style="text-align:left;">
+0
+</td>
+<td style="text-align:left;">
+1
+</td>
+<td style="text-align:left;">
+1
+</td>
+<td style="text-align:left;">
+3
+</td>
+<td style="text-align:left;">
+2
+</td>
+<td style="text-align:left;">
+2
+</td>
+<td style="text-align:left;">
+1
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+7
+</td>
+<td style="text-align:left;">
+0
+</td>
+<td style="text-align:left;">
+1
+</td>
+<td style="text-align:left;">
+1
+</td>
+<td style="text-align:left;">
+2
+</td>
+<td style="text-align:left;">
+2
+</td>
+<td style="text-align:left;">
+3
+</td>
+<td style="text-align:left;">
+2
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+8
+</td>
+<td style="text-align:left;">
+0
+</td>
+<td style="text-align:left;">
+1
+</td>
+<td style="text-align:left;">
+1
+</td>
+<td style="text-align:left;">
+2
+</td>
+<td style="text-align:left;">
+2
+</td>
+<td style="text-align:left;">
+2
+</td>
+<td style="text-align:left;">
+2
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+9
+</td>
+<td style="text-align:left;">
+0
+</td>
+<td style="text-align:left;">
+1
+</td>
+<td style="text-align:left;">
+3
+</td>
+<td style="text-align:left;">
+2
+</td>
+<td style="text-align:left;">
+2
+</td>
+<td style="text-align:left;">
+3
+</td>
+<td style="text-align:left;">
+3
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+10
+</td>
+<td style="text-align:left;">
+1
+</td>
+<td style="text-align:left;">
+3
+</td>
+<td style="text-align:left;">
+2
+</td>
+<td style="text-align:left;">
+1
+</td>
+<td style="text-align:left;">
+1
+</td>
+<td style="text-align:left;">
+1
+</td>
+<td style="text-align:left;">
+1
+</td>
+</tr>
+</tbody>
+</table>
+<p>Looks pretty good! There are more tests for robustness but in this little example, it has been interesting to learn how to use imputation on datasets (especially with categorical variables).</p>
+<p>I see that imputation is in itself a field of study, and I look forward to learning more about it.<br />
+I anticipate that once I begin comparing the full dataset to the imputed dataset, I’ll gain a better understanding of how different imputation approaches can impact the data, and which will be best for the needs of this study.</p>
+</div>
