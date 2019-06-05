@@ -6,9 +6,9 @@ slug: maps-crowdsourced-open-science-project-data-imputation
 categories: ["R"]
 tags: ["data cleaning", "statistics", "tutorial"]
 keywords: ["R", "Programming", "statistics"]
-thumbnailImagePosition: left
-thumbnailImage: /img/cover_img.png
-coverImage: /img/cover_img.png
+thumbnailImagePosition: "left"
+thumbnailImage: "/img/cover_img.png"
+coverImage: "/img/cover_img.png"
 ---
 
 ```{r setup, include=FALSE}
