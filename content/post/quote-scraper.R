@@ -41,15 +41,30 @@ quote_text <- function(html){
 
 t <- quote_text(url)
 
-t
 
-janitor::remove_empty(t, "rows")
+quote_rating <- function(html){
+  
+  path <- read_html(html) 
+  
+  path %>% 
+    html_nodes(xpath = paste(selectr::css_to_xpath(".smallText"), "/text()" )) %>%
+    html_text(trim = TRUE) %>%
+    str_trim(side = "both") %>% 
+    enframe(name = NULL)
 
-?na_if
+}
 
-View(t)
+(rating <- quote_rating(url))
 
-#making it iterative
+gsub('([^[:alnum:]])|(likes)|(tags)', "", rating$value)
+
+rating %>% mutate(value = na_if(value, '([^[:alnum:]])|(likes)|(tags)'))
+
+#
+
+rating %>% naniar::replace_with_na(replace = list(value = c("tags:", ",", "")))
+
+#making it iterative----
 
 #need to add content to these -> need names, country, sex associated to urls
 
