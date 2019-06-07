@@ -4,7 +4,7 @@ library(rvest)
 url <- "https://www.goodreads.com/quotes/search?page=1&q=simone+de+beauvoir&utf8=%E2%9C%93"
 url1 <- "https://www.goodreads.com/quotes/search?page=1&q=rainer+maria+rilke&utf8=%E2%9C%93"
 
-last_page_count <- function(html){
+last_page_count_function <- function(html){
   
   path <- read_html(html)
   
@@ -15,17 +15,17 @@ last_page_count <- function(html){
     str_extract("\\(?[0-9,.]+\\)?") %>%
     map_int(., parse_integer) %>% enframe(name = NULL) %>% 
     drop_na() %>% 
-    max(.)
-                                  
+    max(.) %>% 
+    rowid_to_column("ID")
 }
 
-last_page <- last_page_count(url)
+last_page_count_function <- last_page_count(url)
 
 #collect all pages from author
 
 pages <- str_replace_all(url, "page=1", paste0("page=", as.character(2:last_page)))
 
-quote_text <- function(html){
+quote_text_function <- function(html){
   
   path <- read_html(html)
   
@@ -36,13 +36,14 @@ quote_text <- function(html){
     unlist() %>% 
     enframe(name = NULL) %>% 
     naniar::replace_with_na(replace = list(value = c("", "―"))) %>% 
-    janitor::remove_empty("rows")
+    janitor::remove_empty("rows") %>% 
+    rowid_to_column("ID")
 }
 
-t <- quote_text(url)
+t <- quote_text_function(url)
 
 
-quote_rating <- function(html){
+quote_rating_function <- function(html){
   
   path <- read_html(html) 
   
@@ -54,12 +55,44 @@ quote_rating <- function(html){
     mutate(value = as.numeric(value),
            Author_Rank = min_rank(-value)) %>% 
     arrange(desc(value)) %>% 
-    rename(Rating = value) 
+    rename(Rating = value) %>% 
+    rowid_to_column("ID")
     
   }
 
-(rating <- quote_rating(url))
+(rating <- quote_rating_function(url))
 
+
+#function to extract author name & ensure the quote is the authors (not a commentor)
+
+Author_name_function <- function(html){
+  
+path <- read_html(html)
+  
+ titles <-  path %>% 
+    html_nodes("a.authorOrTitle") %>%
+    html_text() %>% 
+    str_trim() %>% 
+    enframe(name = NULL)
+
+ path %>% 
+   html_nodes(".authorOrTitle") %>%
+   html_text() %>% 
+   str_trim() %>% 
+   enframe(name = NULL) %>% 
+   anti_join(titles) %>% 
+   rename(Author = value) %>% 
+   mutate(Author = str_remove_all(Author, ",")) %>% 
+   rowid_to_column("ID")
+   
+}
+
+(author <- Author_name_function(url))
+
+#combining all 
+
+author %>% 
+  left_join(rating, by = "ID")
 
 
 #making it iterative----
