@@ -47,22 +47,19 @@ quote_rating <- function(html){
   path <- read_html(html) 
   
   path %>% 
-    html_nodes(xpath = paste(selectr::css_to_xpath(".smallText"), "/text()" )) %>%
+    #html_nodes(xpath = paste(selectr::css_to_xpath(".smallText"), "/text()")) %>%
+    html_nodes("a.smallText") %>% 
     html_text(trim = TRUE) %>%
-    str_trim(side = "both") %>% 
-    enframe(name = NULL)
-
-}
+    enframe(name = NULL) %>% 
+    mutate(value = str_remove_all(value, "likes")) %>% 
+    mutate(value = as.numeric(value)) %>% rename(Rating = value)
+  }
 
 (rating <- quote_rating(url))
 
-gsub('([^[:alnum:]])|(likes)|(tags)', "", rating$value)
+mutate(rating, value = str_remove_all(value, "likes")) %>% str_trim(side = "both")
 
-rating %>% mutate(value = na_if(value, '([^[:alnum:]])|(likes)|(tags)'))
-
-#
-
-rating %>% naniar::replace_with_na(replace = list(value = c("tags:", ",", "")))
+?str_remove_all()
 
 #making it iterative----
 
