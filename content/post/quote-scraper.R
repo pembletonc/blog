@@ -4,45 +4,30 @@ library(rvest)
 url <- "https://www.goodreads.com/quotes/search?page=1&q=simone+de+beauvoir&utf8=%E2%9C%93"
 url1 <- "https://www.goodreads.com/quotes/search?page=1&q=rainer+maria+rilke&utf8=%E2%9C%93"
 
-last_page_count_function <- function(html){
-  
-  path <- read_html(html)
-  
-  pages_data <- path %>%
-    html_nodes(xpath = "/html/body/div[2]/div[3]/div[1]/div[1]/div[2]/div[22]") %>% 
-    html_nodes("a") %>% 
-    html_text() %>% 
-    str_extract("\\(?[0-9,.]+\\)?") %>%
-    map_int(., parse_integer) %>% enframe(name = NULL) %>% 
-    drop_na() %>% 
-    max(.) %>% 
-    rowid_to_column("ID")
-}
-
-last_page_count_function <- last_page_count(url)
-
-#collect all pages from author
-
-pages <- str_replace_all(url, "page=1", paste0("page=", as.character(2:last_page)))
+#function to extract the quote text itself
 
 quote_text_function <- function(html){
   
   path <- read_html(html)
   
-  path %>% 
+  p <- path %>% 
     html_nodes(xpath=paste(selectr::css_to_xpath(".quoteText"), "/text()")) %>%
     html_text(trim = TRUE) %>% 
-    str_trim(side = "both") %>% 
-    unlist() %>% 
-    enframe(name = NULL) %>% 
-    naniar::replace_with_na(replace = list(value = c("", "―"))) %>% 
+    enframe(name=NULL)
+  
+  p <- paste(unlist(p$value), collapse = " ") %>% enframe(name=NULL)
+  
+  p %>% 
+    separate_rows(value, sep = "―", convert = TRUE) %>% 
+    naniar::replace_with_na(replace = list(value = c(" "))) %>% 
     janitor::remove_empty("rows") %>% 
-    rowid_to_column("ID")
+    rename(Quote = value) %>% 
+    rowid_to_column("ID") %>% 
+    mutate(Quote = str_trim(Quote, side = "both"))
+
 }
 
-t <- quote_text_function(url)
-
-
+#function to extract the ratings on goodreads
 quote_rating_function <- function(html){
   
   path <- read_html(html) 
@@ -60,12 +45,8 @@ quote_rating_function <- function(html){
     
   }
 
-(rating <- quote_rating_function(url))
-
-
 #function to extract author name & ensure the quote is the authors (not a commentor)
-
-Author_name_function <- function(html){
+author_name_function <- function(html){
   
 path <- read_html(html)
   
@@ -87,15 +68,88 @@ path <- read_html(html)
    
 }
 
-(author <- Author_name_function(url))
-
 #combining all 
 
-author %>% 
-  left_join(rating, by = "ID")
+get_data_table <- function(html){
+  
+ quote <-  quote_text_function(html)
+ rating <-  quote_rating_function(html)
+ author <-  author_name_function(html)
+  
+ author %>% 
+   left_join(rating, by = "ID") %>% 
+   left_join(quote, by = "ID")
+ 
+}
+
+
+last_page_count_function <- function(html){
+  
+  path <- read_html(html)
+  
+  pages_data <- path %>%
+    html_nodes(xpath = "/html/body/div[2]/div[3]/div[1]/div[1]/div[2]/div[22]") %>% 
+    html_nodes("a") %>% 
+    html_text() %>% 
+    str_extract("\\(?[0-9,.]+\\)?") %>%
+    map_int(., parse_integer) %>% enframe(name = NULL) %>% 
+    drop_na() %>% 
+    max(.)
+}
+
+
+scrape_multiple <- function(html) {
+  
+  last_page_number <- last_page_count_function(html)
+  
+  list_of_pages <-  str_replace_all(url, "page=1", paste0("page=", as.character(2:last_page_number)))
+  
+  list_of_pages %>% 
+    nest() %>% 
+    map(get_data_table) %>%
+    nest()
+  
+}
+
+
+#note -> rating is inaccurate: doesn't account for added pages, and re-ranks for each page
+#note -> doesn't appear to have any of the higher liked quotes
+
+test <- scrape_multiple(url)
+
+View(test)
+
+
+combine(url1)
+
+url_list <- list(url = url, url1 = url1)
+
+
+#drop IDs to add a DF-wide ID
+map_dfr(url_list, combine) %>% select(-ID) %>% rowid_to_column("ID") %>% View()
+
+map_dfr(url_list, combine) %>% View()
+
 
 
 #making it iterative----
+
+
+
+
+last_page_simone <- last_page_count_function(url)
+
+#collect all pages from author
+
+pages_simone <- str_replace_all(url, "page=1", paste0("page=", as.character(2:last_page_simone)))
+
+
+pages_simone
+
+
+
+
+
 
 #need to add content to these -> need names, country, sex associated to urls
 
