@@ -47,19 +47,20 @@ quote_rating <- function(html){
   path <- read_html(html) 
   
   path %>% 
-    #html_nodes(xpath = paste(selectr::css_to_xpath(".smallText"), "/text()")) %>%
     html_nodes("a.smallText") %>% 
     html_text(trim = TRUE) %>%
     enframe(name = NULL) %>% 
     mutate(value = str_remove_all(value, "likes")) %>% 
-    mutate(value = as.numeric(value)) %>% rename(Rating = value)
+    mutate(value = as.numeric(value),
+           Author_Rank = min_rank(-value)) %>% 
+    arrange(desc(value)) %>% 
+    rename(Rating = value) 
+    
   }
 
 (rating <- quote_rating(url))
 
-mutate(rating, value = str_remove_all(value, "likes")) %>% str_trim(side = "both")
 
-?str_remove_all()
 
 #making it iterative----
 
