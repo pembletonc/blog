@@ -37,10 +37,6 @@ quote_rating_function <- function(html){
     html_text(trim = TRUE) %>%
     enframe(name = NULL) %>% 
     mutate(value = str_remove_all(value, "likes")) %>% 
-    mutate(value = as.numeric(value),
-           Author_Rank = min_rank(-value)) %>% 
-    arrange(desc(value)) %>% 
-    rename(Rating = value) %>% 
     rowid_to_column("ID")
     
   }
@@ -102,20 +98,29 @@ scrape_multiple <- function(html) {
   
   last_page_number <- last_page_count_function(html)
   
-  list_of_pages <-  str_replace_all(url, "page=1", paste0("page=", as.character(2:last_page_number)))
+  list_of_pages <-  str_replace_all(html, "page=1", paste0("page=", as.character(1:last_page_number)))
+  
+  
   
   list_of_pages %>% 
-    nest() %>% 
-    map(get_data_table) %>%
+    map(get_data_table) %>% 
+    bind_rows() %>% 
+    filter(Author %in% c("Simone de Beauvoir")) %>%
+    select(-ID) %>% 
+    group_by(Author) %>% 
     nest()
+    
+  }
+
+test <- scrape_multiple(url)
+
+test %>% mutate(data = map(data, ~mutate(.x, Author_Rank = 1:nrow(.x)
+                                              ))) %>% unnest() %>% rowid_to_column("ID") %>% View()
+
   
-}
-
-
 #note -> rating is inaccurate: doesn't account for added pages, and re-ranks for each page
 #note -> doesn't appear to have any of the higher liked quotes
 
-test <- scrape_multiple(url)
 
 View(test)
 
