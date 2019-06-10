@@ -93,76 +93,41 @@ last_page_count_function <- function(html){
     max(.)
 }
 
-
 scrape_multiple <- function(html) {
   
   last_page_number <- last_page_count_function(html)
   
   list_of_pages <-  str_replace_all(html, "page=1", paste0("page=", as.character(1:last_page_number)))
   
+  author_names <- 
   
-  
-  list_of_pages %>% 
+  nested_df <- list_of_pages %>% 
     map(get_data_table) %>% 
     bind_rows() %>% 
-    filter(Author %in% c("Simone de Beauvoir")) %>%
+    filter(Author %in% c("Simone de Beauvoir", "Rainer Maria Rilke")) %>%
     select(-ID) %>% 
     group_by(Author) %>% 
     nest()
-    
+  
+  nested_df %>% 
+    mutate(data = map(data, ~mutate(.x, Author_Rank = 1:nrow(.x)))) %>% 
+    unnest()
   }
 
-test <- scrape_multiple(url)
-
-test %>% mutate(data = map(data, ~mutate(.x, Author_Rank = 1:nrow(.x)
-                                              ))) %>% unnest() %>% rowid_to_column("ID") %>% View()
-
-  
-#note -> rating is inaccurate: doesn't account for added pages, and re-ranks for each page
-#note -> doesn't appear to have any of the higher liked quotes
-
-
-View(test)
-
-
-combine(url1)
 
 url_list <- list(url = url, url1 = url1)
 
+t <- url_list %>% 
+  map_dfr(scrape_multiple) %>% 
+  rowid_to_column("ID") %>%
+  arrange(desc(Rating)) %>% 
+  mutate(All_Authors_Ranking = 1:nrow(.)) %>% 
+  arrange(Author)
 
-#drop IDs to add a DF-wide ID
-map_dfr(url_list, combine) %>% select(-ID) %>% rowid_to_column("ID") %>% View()
+authors <- list("Simone de Beauvoir", "Rainer Maria Rilke", "Socrates")
 
-map_dfr(url_list, combine) %>% View()
+authors_formatted <- tolower(str_replace_all(authors, pattern = " ", replacement = "+"))
 
-
-
-#making it iterative----
-
-
-
-
-last_page_simone <- last_page_count_function(url)
-
-#collect all pages from author
-
-pages_simone <- str_replace_all(url, "page=1", paste0("page=", as.character(2:last_page_simone)))
+paste("https://www.goodreads.com/quotes/search?page=1&q=", authors_formatted, "&utf8=%E2%9C%93", sep="")
 
 
-pages_simone
-
-
-
-
-
-
-#need to add content to these -> need names, country, sex associated to urls
-
-#note that can replace everything after 'q=' and before '&utf' to add new names -> next iteration
-
-url <- "https://www.goodreads.com/quotes/search?page=1&q=simone+de+beauvoir&utf8=%E2%9C%93"
-url1 <- "https://www.goodreads.com/quotes/search?page=1&q=rainer+maria+rilke&utf8=%E2%9C%93"
-
-authors <- list(url, url1)
-
-authors %>% map(., last_page_count)
