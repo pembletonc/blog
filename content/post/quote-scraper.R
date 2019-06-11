@@ -36,9 +36,10 @@ quote_rating_function <- function(html){
     html_nodes("a.smallText") %>% 
     html_text(trim = TRUE) %>%
     enframe(name = NULL) %>% 
-    mutate(value = str_remove_all(value, "likes")) %>% 
-    rowid_to_column("ID")
-    
+    mutate(value = str_remove_all(value, "likes"),
+           Rating = as.numeric(value)) %>%
+    rowid_to_column("ID") %>% 
+    select(-value)
   }
 
 #function to extract author name & ensure the quote is the authors (not a commentor)
@@ -68,16 +69,15 @@ path <- read_html(html)
 
 get_data_table <- function(html){
   
- quote <-  quote_text_function(html)
- rating <-  quote_rating_function(html)
- author <-  author_name_function(html)
+  quote <-  quote_text_function(html)
+  rating <-  quote_rating_function(html)
+  author <-  author_name_function(html)
   
- author %>% 
-   left_join(rating, by = "ID") %>% 
-   left_join(quote, by = "ID")
- 
+  author %>% 
+    left_join(rating, by = "ID") %>% 
+    left_join(quote, by = "ID")
+  
 }
-
 
 last_page_count_function <- function(html){
   
@@ -93,18 +93,24 @@ last_page_count_function <- function(html){
     max(.)
 }
 
-scrape_multiple <- function(html) {
+page_collect_function <-  function(author){
   
-  last_page_number <- last_page_count_function(html)
+  authors_formatted <- tolower(str_replace_all(author, pattern = " ", replacement = "+"))
+  authors_url <- paste("https://www.goodreads.com/quotes/search?page=1&q=", authors_formatted, "&utf8=%E2%9C%93", sep="")
+  last_page_number <- last_page_count_function(authors_url)
+  list_of_pages <- str_replace_all(authors_url, "page=1", paste0("page=", as.character(1:last_page_number)))
   
-  list_of_pages <-  str_replace_all(html, "page=1", paste0("page=", as.character(1:last_page_number)))
-  
-  author_names <- 
-  
+}
+
+
+scrape_multiple <- function(author) {
+
+  list_of_pages <- page_collect_function(author)
+
   nested_df <- list_of_pages %>% 
     map(get_data_table) %>% 
     bind_rows() %>% 
-    filter(Author %in% c("Simone de Beauvoir", "Rainer Maria Rilke")) %>%
+    filter(Author %in% author) %>%
     select(-ID) %>% 
     group_by(Author) %>% 
     nest()
@@ -113,21 +119,26 @@ scrape_multiple <- function(html) {
     mutate(data = map(data, ~mutate(.x, Author_Rank = 1:nrow(.x)))) %>% 
     unnest()
   }
+authors <- list("Simone de Beauvoir")
 
+authors <- list("Simone de Beauvoir", "Rainer Maria Rilke", "Socrates")
 
-url_list <- list(url = url, url1 = url1)
-
-t <- url_list %>% 
-  map_dfr(scrape_multiple) %>% 
+three_authors <- map_dfr(.f = scrape_multiple, .x = authors) %>% 
   rowid_to_column("ID") %>%
   arrange(desc(Rating)) %>% 
   mutate(All_Authors_Ranking = 1:nrow(.)) %>% 
   arrange(Author)
 
-authors <- list("Simone de Beauvoir", "Rainer Maria Rilke", "Socrates")
+View(three_authors)
 
-authors_formatted <- tolower(str_replace_all(authors, pattern = " ", replacement = "+"))
+saveRDS(three_authors, file = "./content/post/three_authors.rds")
 
-paste("https://www.goodreads.com/quotes/search?page=1&q=", authors_formatted, "&utf8=%E2%9C%93", sep="")
+file <- read_rds("three_authors.rds")
+
+
+
+
+
+
 
 
