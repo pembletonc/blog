@@ -1,0 +1,200 @@
+---
+title: "Scrape it 'til you make it"
+author: Corey Pembleton
+date: '2019-06-13'
+slug: scraping-to-build-a-database
+categories: ["R"]
+tags: ["web scraping", "R", "data management"]
+keywords: ["tech", "r", "rstats", "r-lang", "webscraping", "datascience"]
+thumbnailImagePosition: "left"
+thumbnailImage: "/img/freestocks-org-128787-unsplash.jpg"
+coverImage: "/img/rolf-hecken-81359-unsplash.jpg"
+metaAlignment: "center"
+coverMeta: "out"
+
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+suppressWarnings(suppressPackageStartupMessages(library(tidyverse)))
+library(kableExtra)
+```
+
+The other night I was reading and kept seeing some very interesting lines in the text, and I thought, "is it possible to identify the more quote-worth sentence(s) from a text?". Realizing that this is a pretty big question, I decided to tone it down a bit and ask a more reasonable question - could I create a database of quotes by some of my favourite authors? Which led me to ask...could I create a database searching tool in a shiny app so anyone could check out quotes of their favourite author? Using a combination of ```rvest``` and the tidyverse tools the answer is...yes! Using the [goodreads.com](goodreads.com) quote search results, I am able to find i) multitude of authors, ii) ratings, iii) quote text. 
+
+```{r}
+library(tidyverse)
+library(rvest)
+```
+
+Essentially, I broke down all of the pieces I wanted to scrape into separate functions, the combined them all into one big function. Not the best practice, but I was tired of running them all individually and it's a bit more efficient now. 
+
+The scraping functions are all fairly similar, with small differences in the type of text being extracted. 
+
+### Quote Text
+
+```{r}
+ quote_text_function <- function(html){
+    
+    path <- read_html(html)
+    
+    p <- path %>% 
+      html_nodes(xpath=paste(selectr::css_to_xpath(".quoteText"), "/text()")) %>%
+      html_text(trim = TRUE) %>% 
+      enframe(name=NULL)
+    
+    p <- paste(unlist(p$value), collapse = " ") %>% enframe(name=NULL)
+    
+    p %>% 
+      separate_rows(value, sep = "―", convert = TRUE) %>% 
+      naniar::replace_with_na(replace = list(value = c(" "))) %>% 
+      janitor::remove_empty("rows") %>% 
+      rename(Quote = value) %>% 
+      rowid_to_column("ID") %>% 
+      mutate(Quote = str_trim(Quote, side = "both"))
+    
+  }
+```
+
+### Popularity aka "Likes"
+
+```{r}
+quote_rating_function <- function(html){
+    
+    path <- read_html(html) 
+    
+    path %>% 
+      html_nodes("a.smallText") %>% 
+      html_text(trim = TRUE) %>%
+      enframe(name = NULL) %>% 
+      mutate(value = str_remove_all(value, "likes"),
+             Rating = as.numeric(value)) %>%
+      rowid_to_column("ID") %>% 
+      select(-value)
+  }
+```
+
+### Author Name Extraction
+
+```{r}
+ author_name_function <- function(html){
+    
+    path <- read_html(html)
+    
+    #some a.authorOrTitle nodes have titles, so will remove the titles using anti-join
+    titles <-  path %>% 
+      html_nodes("a.authorOrTitle") %>%
+      html_text() %>% 
+      str_trim() %>% 
+      enframe(name = NULL)
+    
+    path %>% 
+      html_nodes(".authorOrTitle") %>%
+      html_text() %>% 
+      str_trim() %>% 
+      enframe(name = NULL) %>% 
+      anti_join(titles) %>% 
+      rename(Author = value) %>% 
+      mutate(Author = str_remove_all(Author, ",")) %>% 
+      rowid_to_column("ID")
+ }
+```
+
+
+### Count last page in authors search results
+
+```{r}
+  last_page_count_function <- function(html){
+    
+    path <- read_html(html)
+    
+    pages_data <- path %>%
+      html_nodes(xpath = "/html/body/div[2]/div[3]/div[1]/div[1]/div[2]/div[22]") %>% 
+      html_nodes("a") %>% 
+      html_text() %>% 
+      str_extract("\\(?[0-9,.]+\\)?") %>%
+      map_int(., parse_integer) %>% enframe(name = NULL) %>% 
+      drop_na() %>% 
+      max(.)
+  }
+```
+
+
+### Combining the functions with purrr
+
+I'm proud of this function, it allows me to be able to take any author's name, and put it into the url needed on goodreads to be able to get the page count:
+```{r}
+  page_collect_function <-  function(author){
+    
+    authors_formatted <- tolower(str_replace_all(author, pattern = " ", replacement = "+"))
+    authors_url <- paste("https://www.goodreads.com/quotes/search?page=1&q=", authors_formatted, "&utf8=%E2%9C%93", sep="")
+    last_page_number <- last_page_count_function(authors_url)
+    list_of_pages <- str_replace_all(authors_url, "page=1", paste0("page=", as.character(1:last_page_number)))
+    
+  }
+```
+
+Using a combination of joining the tables, and using purrr again, can create a function (here it isn't shown because is combined into one large function) which loops through the joined tables which the previous functions create, filter out any quotes not from those authors (e.g. sometimes quotes from anthologies or biographies slip in), and adds a rank according to each author. I'm not sure what that last function would be used for, but I was thinking for future use perhaps someone might want to view the top n quotes from certain authors, not just the top quotes in the entire dataset. 
+```{r}
+ list_of_pages <- page_collect_function(author)
+
+  join_tables<- function(html){
+    
+    quote <-  quote_text_function(html)
+    rating <-  quote_rating_function(html)
+    author_name <-  author_name_function(html)
+    
+    author_name %>% 
+      left_join(rating, by = "ID") %>% 
+      left_join(quote, by = "ID")
+    
+  }
+  
+  nested_df <- list_of_pages %>% 
+    map(join_tables) %>% 
+    bind_rows() %>% 
+    filter(Author %in% author) %>%
+    select(-ID) %>% 
+    group_by(Author) %>% 
+    nest()
+  
+  nested_df %>% 
+    mutate(data = map(data, ~mutate(.x, Author_Rank = 1:nrow(.x)))) %>% 
+    unnest()
+```
+
+Note that here I use all of the functions combined into a single wrapper function I call "scrape_multiple" here:
+```{r}
+authors <- list("Simone de Beauvoir", "Rainer Maria Rilke", "Socrates")
+
+three_authors <- map_dfr(.f = scrape_multiple, .x = authors) %>% 
+  rowid_to_column("ID") %>%
+  arrange(desc(Rating)) %>% 
+  mutate(All_Authors_Ranking = 1:nrow(.)) %>% 
+  arrange(Author)
+```
+
+It takes a little while to run, but the result couldn't be better, a single database with author names, the rating given to their quote, the quote text itself, and their ranking:
+
+```{r}
+# A tibble: 15 x 6
+      ID Author       Rating Quote                                                       Author_Rank All_Authors_Rank…
+   <int> <chr>         <dbl> <chr>                                                             <int>             <int>
+ 1  1833 Socrates      13409 “The only true wisdom is in knowing you know nothing.”                1                 1
+ 2   690 Rainer Mari…  10726 “Perhaps all the dragons in our lives are princesses who a…           1                 2
+ 3  1834 Socrates       6327 “The unexamined life is not worth living.”                            2                 3
+ 4   691 Rainer Mari…   4439 “Be patient toward all that is unsolved in your heart and …           2                 4
+ 5   692 Rainer Mari…   2994 “We need, in love, to practice only this: letting each oth…           3                 5
+ 6  1835 Socrates       2956 “I cannot teach anybody anything. I can only make them thi…           3                 6
+ 7   693 Rainer Mari…   2909 “Let everything happen to you Beauty and terror Just keep …           4                 7
+ 8  1836 Socrates       2886 “There is only one good, knowledge, and one evil, ignoranc…           4                 8
+ 9   694 Rainer Mari…   2518 “Therefore, dear Sir, love your solitude and try to sing o…           5                 9
+10     1 Simone de B…   2494 “I am too intelligent, too demanding, and too resourceful …           1                10
+11     2 Simone de B…   2265 “She was ready to deny the existence of space and time rat…           2                11
+12     3 Simone de B…   2168 “I am awfully greedy; I want everything from life. I want …           3                12
+13     4 Simone de B…   1774 “One's life has value so long as one attributes value to t…           4                13
+14  1837 Socrates       1687 “Be kind, for everyone you meet is fighting a hard battle.”           5                14
+15  1838 Socrates       1672 “Wonder is the beginning of wisdom.”                                  6                15
+```
+
+I'm looking forward to adding more authors to the database, will ensure there is equality in it, and look forward to getting input on other people's favourite authors. The filesize for these three authors is about 290kb stored as an .rds, so I think there is room for many more (what's the max file size I can host on a shinyapp anyways?)!
+

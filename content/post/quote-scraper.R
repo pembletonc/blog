@@ -97,7 +97,7 @@ scrape_multiple <- function(author) {
   
   list_of_pages <- page_collect_function(author)
 
-  get_data_table <- function(html){
+  join_tables<- function(html){
     
     quote <-  quote_text_function(html)
     rating <-  quote_rating_function(html)
@@ -110,7 +110,7 @@ scrape_multiple <- function(author) {
   }
   
   nested_df <- list_of_pages %>% 
-    map(get_data_table) %>% 
+    map(join_tables) %>% 
     bind_rows() %>% 
     filter(Author %in% author) %>%
     select(-ID) %>% 
@@ -141,8 +141,7 @@ saveRDS(three_authors, file = "./content/post/three_authors.rds")
 
 file <- read_rds("three_authors.rds")
 
-
-
+file %>% arrange(All_Authors_Ranking) %>% head(15)
 
 
 

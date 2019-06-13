@@ -1,0 +1,168 @@
+---
+title: "Scrape it 'til you make it"
+author: Corey Pembleton
+date: '2019-06-13'
+slug: scraping-to-build-a-database
+categories: ["R"]
+tags: ["web scraping", "R", "data management"]
+keywords: ["tech", "r", "rstats", "r-lang", "webscraping", "datascience"]
+thumbnailImagePosition: "left"
+thumbnailImage: "/img/freestocks-org-128787-unsplash.jpg"
+coverImage: "/img/rolf-hecken-81359-unsplash.jpg"
+metaAlignment: "center"
+coverMeta: "out"
+
+---
+
+
+
+<p>The other night I was reading and kept seeing some very interesting lines in the text, and I thought, “is it possible to identify the more quote-worth sentence(s) from a text?”. Realizing that this is a pretty big question, I decided to tone it down a bit and ask a more reasonable question - could I create a database of quotes by some of my favourite authors? Which led me to ask…could I create a database searching tool in a shiny app so anyone could check out quotes of their favourite author? Using a combination of <code>rvest</code> and the tidyverse tools the answer is…yes! Using the <a href="goodreads.com">goodreads.com</a> quote search results, I am able to find i) multitude of authors, ii) ratings, iii) quote text.</p>
+<pre class="r"><code>library(tidyverse)
+library(rvest)</code></pre>
+<p>Essentially, I broke down all of the pieces I wanted to scrape into separate functions, the combined them all into one big function. Not the best practice, but I was tired of running them all individually and it’s a bit more efficient now.</p>
+<p>The scraping functions are all fairly similar, with small differences in the type of text being extracted.</p>
+<div id="quote-text" class="section level3">
+<h3>Quote Text</h3>
+<pre class="r"><code> quote_text_function &lt;- function(html){
+    
+    path &lt;- read_html(html)
+    
+    p &lt;- path %&gt;% 
+      html_nodes(xpath=paste(selectr::css_to_xpath(&quot;.quoteText&quot;), &quot;/text()&quot;)) %&gt;%
+      html_text(trim = TRUE) %&gt;% 
+      enframe(name=NULL)
+    
+    p &lt;- paste(unlist(p$value), collapse = &quot; &quot;) %&gt;% enframe(name=NULL)
+    
+    p %&gt;% 
+      separate_rows(value, sep = &quot;―&quot;, convert = TRUE) %&gt;% 
+      naniar::replace_with_na(replace = list(value = c(&quot; &quot;))) %&gt;% 
+      janitor::remove_empty(&quot;rows&quot;) %&gt;% 
+      rename(Quote = value) %&gt;% 
+      rowid_to_column(&quot;ID&quot;) %&gt;% 
+      mutate(Quote = str_trim(Quote, side = &quot;both&quot;))
+    
+  }</code></pre>
+</div>
+<div id="popularity-aka-likes" class="section level3">
+<h3>Popularity aka “Likes”</h3>
+<pre class="r"><code>quote_rating_function &lt;- function(html){
+    
+    path &lt;- read_html(html) 
+    
+    path %&gt;% 
+      html_nodes(&quot;a.smallText&quot;) %&gt;% 
+      html_text(trim = TRUE) %&gt;%
+      enframe(name = NULL) %&gt;% 
+      mutate(value = str_remove_all(value, &quot;likes&quot;),
+             Rating = as.numeric(value)) %&gt;%
+      rowid_to_column(&quot;ID&quot;) %&gt;% 
+      select(-value)
+  }</code></pre>
+</div>
+<div id="author-name-extraction" class="section level3">
+<h3>Author Name Extraction</h3>
+<pre class="r"><code> author_name_function &lt;- function(html){
+    
+    path &lt;- read_html(html)
+    
+    #some a.authorOrTitle nodes have titles, so will remove the titles using anti-join
+    titles &lt;-  path %&gt;% 
+      html_nodes(&quot;a.authorOrTitle&quot;) %&gt;%
+      html_text() %&gt;% 
+      str_trim() %&gt;% 
+      enframe(name = NULL)
+    
+    path %&gt;% 
+      html_nodes(&quot;.authorOrTitle&quot;) %&gt;%
+      html_text() %&gt;% 
+      str_trim() %&gt;% 
+      enframe(name = NULL) %&gt;% 
+      anti_join(titles) %&gt;% 
+      rename(Author = value) %&gt;% 
+      mutate(Author = str_remove_all(Author, &quot;,&quot;)) %&gt;% 
+      rowid_to_column(&quot;ID&quot;)
+ }</code></pre>
+</div>
+<div id="count-last-page-in-authors-search-results" class="section level3">
+<h3>Count last page in authors search results</h3>
+<pre class="r"><code>  last_page_count_function &lt;- function(html){
+    
+    path &lt;- read_html(html)
+    
+    pages_data &lt;- path %&gt;%
+      html_nodes(xpath = &quot;/html/body/div[2]/div[3]/div[1]/div[1]/div[2]/div[22]&quot;) %&gt;% 
+      html_nodes(&quot;a&quot;) %&gt;% 
+      html_text() %&gt;% 
+      str_extract(&quot;\\(?[0-9,.]+\\)?&quot;) %&gt;%
+      map_int(., parse_integer) %&gt;% enframe(name = NULL) %&gt;% 
+      drop_na() %&gt;% 
+      max(.)
+  }</code></pre>
+</div>
+<div id="combining-the-functions-with-purrr" class="section level3">
+<h3>Combining the functions with purrr</h3>
+<p>I’m proud of this function, it allows me to be able to take any author’s name, and put it into the url needed on goodreads to be able to get the page count:</p>
+<pre class="r"><code>  page_collect_function &lt;-  function(author){
+    
+    authors_formatted &lt;- tolower(str_replace_all(author, pattern = &quot; &quot;, replacement = &quot;+&quot;))
+    authors_url &lt;- paste(&quot;https://www.goodreads.com/quotes/search?page=1&amp;q=&quot;, authors_formatted, &quot;&amp;utf8=%E2%9C%93&quot;, sep=&quot;&quot;)
+    last_page_number &lt;- last_page_count_function(authors_url)
+    list_of_pages &lt;- str_replace_all(authors_url, &quot;page=1&quot;, paste0(&quot;page=&quot;, as.character(1:last_page_number)))
+    
+  }</code></pre>
+<p>Using a combination of joining the tables, and using purrr again, can create a function (here it isn’t shown because is combined into one large function) which loops through the joined tables which the previous functions create, filter out any quotes not from those authors (e.g. sometimes quotes from anthologies or biographies slip in), and adds a rank according to each author. I’m not sure what that last function would be used for, but I was thinking for future use perhaps someone might want to view the top n quotes from certain authors, not just the top quotes in the entire dataset.</p>
+<pre class="r"><code> list_of_pages &lt;- page_collect_function(author)
+
+  join_tables&lt;- function(html){
+    
+    quote &lt;-  quote_text_function(html)
+    rating &lt;-  quote_rating_function(html)
+    author_name &lt;-  author_name_function(html)
+    
+    author_name %&gt;% 
+      left_join(rating, by = &quot;ID&quot;) %&gt;% 
+      left_join(quote, by = &quot;ID&quot;)
+    
+  }
+  
+  nested_df &lt;- list_of_pages %&gt;% 
+    map(join_tables) %&gt;% 
+    bind_rows() %&gt;% 
+    filter(Author %in% author) %&gt;%
+    select(-ID) %&gt;% 
+    group_by(Author) %&gt;% 
+    nest()
+  
+  nested_df %&gt;% 
+    mutate(data = map(data, ~mutate(.x, Author_Rank = 1:nrow(.x)))) %&gt;% 
+    unnest()</code></pre>
+<p>Note that here I use all of the functions combined into a single wrapper function I call “scrape_multiple” here:</p>
+<pre class="r"><code>authors &lt;- list(&quot;Simone de Beauvoir&quot;, &quot;Rainer Maria Rilke&quot;, &quot;Socrates&quot;)
+
+three_authors &lt;- map_dfr(.f = scrape_multiple, .x = authors) %&gt;% 
+  rowid_to_column(&quot;ID&quot;) %&gt;%
+  arrange(desc(Rating)) %&gt;% 
+  mutate(All_Authors_Ranking = 1:nrow(.)) %&gt;% 
+  arrange(Author)</code></pre>
+<p>It takes a little while to run, but the result couldn’t be better, a single database with author names, the rating given to their quote, the quote text itself, and their ranking:</p>
+<pre class="r"><code># A tibble: 15 x 6
+      ID Author       Rating Quote                                                       Author_Rank All_Authors_Rank…
+   &lt;int&gt; &lt;chr&gt;         &lt;dbl&gt; &lt;chr&gt;                                                             &lt;int&gt;             &lt;int&gt;
+ 1  1833 Socrates      13409 “The only true wisdom is in knowing you know nothing.”                1                 1
+ 2   690 Rainer Mari…  10726 “Perhaps all the dragons in our lives are princesses who a…           1                 2
+ 3  1834 Socrates       6327 “The unexamined life is not worth living.”                            2                 3
+ 4   691 Rainer Mari…   4439 “Be patient toward all that is unsolved in your heart and …           2                 4
+ 5   692 Rainer Mari…   2994 “We need, in love, to practice only this: letting each oth…           3                 5
+ 6  1835 Socrates       2956 “I cannot teach anybody anything. I can only make them thi…           3                 6
+ 7   693 Rainer Mari…   2909 “Let everything happen to you Beauty and terror Just keep …           4                 7
+ 8  1836 Socrates       2886 “There is only one good, knowledge, and one evil, ignoranc…           4                 8
+ 9   694 Rainer Mari…   2518 “Therefore, dear Sir, love your solitude and try to sing o…           5                 9
+10     1 Simone de B…   2494 “I am too intelligent, too demanding, and too resourceful …           1                10
+11     2 Simone de B…   2265 “She was ready to deny the existence of space and time rat…           2                11
+12     3 Simone de B…   2168 “I am awfully greedy; I want everything from life. I want …           3                12
+13     4 Simone de B…   1774 “One&#39;s life has value so long as one attributes value to t…           4                13
+14  1837 Socrates       1687 “Be kind, for everyone you meet is fighting a hard battle.”           5                14
+15  1838 Socrates       1672 “Wonder is the beginning of wisdom.”                                  6                15</code></pre>
+<p>I’m looking forward to adding more authors to the database, will ensure there is equality in it, and look forward to getting input on other people’s favourite authors. The filesize for these three authors is about 290kb stored as an .rds, so I think there is room for many more (what’s the max file size I can host on a shinyapp anyways?)!</p>
+</div>
