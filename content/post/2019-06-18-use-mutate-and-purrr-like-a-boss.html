@@ -1,0 +1,109 @@
+---
+title: "Use dplyr like its meant to be used"
+author: Corey Pembleton
+date: '2019-06-18'
+slug: use-dplyr-like-it-should-be-used
+categories: ["R"]
+tags: ["data cleaning", "tutorial"]
+keywords: ["R", "Programming", "statistics", "dplyr"]
+thumbnailImagePosition: "left"
+thumbnailImage: "/img/plyers.jpg"
+coverImage: "/img/plyers.jpg"
+metaAlignment: "center"
+coverMeta: "out"
+---
+
+
+
+<p>After finding myself going back to some previous projects a few times to review some very useful lines of lesser-known dplyr functions, I decided I should write them both into the eternal bottomless pit that is web-blogging.</p>
+<div id="using-mutate_at-and-case_when" class="section level3">
+<h3>Using mutate_at and case_when</h3>
+<p>I love this example. I found myself constantly repeating <code>case_when()</code> lines within a <code>mutate()</code> to change variables based on names, and knew there had to be a better way. I’m sure it could be neater, but until I make it <strong>more</strong> efficient, this is what I have:</p>
+<pre class="r"><code>suppressWarnings(suppressPackageStartupMessages(library(tidyverse)))
+
+tib &lt;- tibble(x1 = rep(1:3, 3),
+       x2 = rep(3:1, 3),
+       x3 = rep(1:3, each = 3),
+       x4 = rep(3:1, each = 3))
+
+tib %&gt;% mutate_at(vars(c(&quot;x1&quot;, &quot;x2&quot;, &quot;x3&quot;, &quot;x4&quot;)), 
+            list(y = ~case_when(. %in% 1:2 ~ &quot;good&quot;,
+                               . == 3 ~ &quot;bad&quot;, 
+                               TRUE ~ as.character(.))))</code></pre>
+<pre><code>## # A tibble: 9 x 8
+##      x1    x2    x3    x4 x1_y  x2_y  x3_y  x4_y 
+##   &lt;int&gt; &lt;int&gt; &lt;int&gt; &lt;int&gt; &lt;chr&gt; &lt;chr&gt; &lt;chr&gt; &lt;chr&gt;
+## 1     1     3     1     3 good  bad   good  bad  
+## 2     2     2     1     3 good  good  good  bad  
+## 3     3     1     1     3 bad   good  good  bad  
+## 4     1     3     2     2 good  bad   good  good 
+## 5     2     2     2     2 good  good  good  good 
+## 6     3     1     2     2 bad   good  good  good 
+## 7     1     3     3     1 good  bad   bad   good 
+## 8     2     2     3     1 good  good  bad   good 
+## 9     3     1     3     1 bad   good  bad   good</code></pre>
+<p>Essentially it speeds up the variable renaming process by changing all names given a list of values in a gathered column. In this example, the case_when only has 3 options, but I’ve extended this several times across more complicated vectors and it works like a charm. There are small syntax pieces inside the <code>mutate_at()</code> which make it hard to remember, but after a few uses it quickly became a mainstay if I’ve ever needed to rename variables.</p>
+</div>
+<div id="using-select-one_of" class="section level3">
+<h3>Using select &amp; one_of()</h3>
+<p>Maybe everyone already knows about this, but for me it was pretty great: by using this combination, you can select variables in a vector in combination with another character vector. There are so many of these helper functions that it’s easy to forget they exist!</p>
+<pre class="r"><code>names &lt;- c(&quot;mpg&quot;, &quot;cyl&quot;)
+
+head(mtcars, 10) %&gt;% select(one_of(names, &quot;drat&quot;))</code></pre>
+<pre><code>##                    mpg cyl drat
+## Mazda RX4         21.0   6 3.90
+## Mazda RX4 Wag     21.0   6 3.90
+## Datsun 710        22.8   4 3.85
+## Hornet 4 Drive    21.4   6 3.08
+## Hornet Sportabout 18.7   8 3.15
+## Valiant           18.1   6 2.76
+## Duster 360        14.3   8 3.21
+## Merc 240D         24.4   4 3.69
+## Merc 230          22.8   4 3.92
+## Merc 280          19.2   6 3.92</code></pre>
+</div>
+<div id="using-enquo-to-improve-function-efficiency" class="section level3">
+<h3>Using enquo &amp; !! to improve function efficiency</h3>
+<p>This function below isn’t the most helpful at general analysis, but what it allows is to quickly give a summarized count of non-NA variables in a dataframe based upon certain variables. The thing that creating this function helped me figure out is the importance of using <code>enquo()</code> and the <code>!!</code> (bang bang) together to be able to use tidyeval approaches within functions.</p>
+<pre class="r"><code>filter.NA.fun &lt;- function(df, var){ 
+  
+  var &lt;- enquo(var)
+  
+  df %&gt;% 
+    select(one_of(!!var)) %&gt;%
+    filter_all(all_vars(!is.na(.))) %&gt;% 
+    summarise(count = n()) 
+  } </code></pre>
+</div>
+<div id="making-a-single-query-to-multiple-mysql-databases-at-once" class="section level3">
+<h3>Making a single query to multiple mysql databases at once</h3>
+<p>I’ve used this on a few occasions, not dplyr but RMariaDB &amp; purrr, but will add it here as an honourable mention. Pretty much it extracts all data from the tables in the list based on the query given in the function. I’m thinking to update this shortly with the query as an input, so to be able to execute more flexible queries.</p>
+<pre class="r"><code>query_function &lt;- function(db_table){
+  
+  library(RMariaDB)
+  
+  conn &lt;- dbConnect(RMariaDB::MariaDB(),
+                    user= Sys.getenv(&quot;sql_username&quot;), #not run
+                    password= Sys.getenv(&quot;sql_password&quot;), #not run
+                    dbname=&#39;dbname&#39;, #not run
+                    host=&#39;localhost&#39;)
+  
+  query &lt;- paste(&quot;SELECT * FROM&quot;, db_table)
+  rs &lt;- dbSendQuery(conn = conn, query)
+  db_df &lt;- dbFetch(rs)
+  
+  return(db_df)
+  
+  dbDisconnect(conn)
+  
+}
+  
+#push the tables to .csv format to the google drive
+
+db_names &lt;- c(&quot;DB_tbl_name1&quot;, &quot;DB_tbl_name2&quot;, &quot;DB_tbl_name3&quot;)
+
+#map them over
+
+intake_tables &lt;- map(db_names, query_function)</code></pre>
+<p>Once I go through a few more projects I’ll see what else should be here, but en bref, its a small start towards collecting helpful functions used often.</p>
+</div>
