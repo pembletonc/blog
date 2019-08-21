@@ -14,7 +14,7 @@ META <- list(
 
 TOPIC <- list(
   #terms related to the topic which can be included
-  terms <- c("climate","housing","healthcare","immigration", "climatechange", "housingcrisis"),
+  terms <- c("climate","housing","healthcare","immigration", "climatechange", "housingcrisis")
   
   #hashtags to exclude (if broader analysis occurs)
   #hashtag_exclude = "",

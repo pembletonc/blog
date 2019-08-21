@@ -7,8 +7,8 @@ dashboardPage(
   # Dashboard Page Setup-------------------------------------------------------
   title = META$name,
   skin = META$skin_color,
-  theme = c(META$theme_css, "custom.css"),
-  sidebar_mini = TRUE,
+  #theme = c(META$theme_css, "custom.css"),
+  #sidebar_mini = TRUE,
   dashboardHeader(
     title = HTML(glue::glue(
       '<span class="logo-mini">{META$logo_mini}</span>
@@ -20,7 +20,7 @@ dashboardPage(
   dashboardSidebar(
     sidebarMenu(
       menuItem("Dashboard", tabName = "tab_dashboard", icon = icon("dashboard")),
-      menuItem("About", tabName = "tab_about", icon = icon(info))
+      menuItem("About", tabName = "tab_about", icon = icon("info"))
     )
   ),
   
@@ -43,19 +43,19 @@ dashboardPage(
           '
         )),
       #insert GA if added later to meta
-      if (!is.null(GA_KEY)) HTML(
-        glue::glue(
-          '
-              <!-- Global site tag (gtag.js) - Google Analytics -->
-              <script async src="https://www.googletagmanager.com/gtag/js?id={GA_KEY}"></script>
-              <script>
-                window.dataLayer = window.dataLayer || [];
-                function gtag(){{dataLayer.push(arguments);}}
-                  gtag(\'js\', new Date());
-                  gtag(\'config\', \'{GA_KEY}\');
-               </script>
-              ')
-      )
+      #if (!is.null(GA_KEY)) HTML(
+      #  glue::glue(
+      #    '
+      #        <!-- Global site tag (gtag.js) - Google Analytics -->
+      #        <script async src="https://www.googletagmanager.com/gtag/js?id={GA_KEY}"></script>
+      #        <script>
+      #          window.dataLayer = window.dataLayer || [];
+      #          function gtag(){{dataLayer.push(arguments);}}
+      #            gtag(\'js\', new Date());
+      #            gtag(\'config\', \'{GA_KEY}\');
+      #         </script>
+      #        ')
+      #)
       #Metadata <head> end------------------------------------------------------
       
     ),
@@ -102,7 +102,7 @@ dashboardPage(
             class = "text-center",
             HTML(twemoji("1F44B")),
             tags$strong("Credits go to Garrick"),
-            HTML(paste0("(", tags$a(href = "https://twitter.com/grrrck", "grrrck"), ")"))
+            HTML(paste0("(", tags$a(href = "https://twitter.com/grrrck", "@grrrck"), ")"))
           )
         )
       )
