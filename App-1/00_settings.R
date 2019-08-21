@@ -1,8 +1,8 @@
 META <- list(
   #name of app
   name = "Canada 2019 Election Candidate Tweets", 
-  description = "", 
-  app_url = "", 
+  description = "A dashboard tracking all tweets of 2019 election candidates in Canada", 
+  app_url = "https://data-break.shinyapps.io/Canada_2019_Election_Tweets", 
   app_icon = "https://www.yorkregion.com/static/images/symbols-vote-2019.png",
   logo_lg = "Canada Votes 2019",
   logo_mini = "CV2019",
@@ -14,7 +14,7 @@ META <- list(
 
 TOPIC <- list(
   #terms related to the topic which can be included
-  terms <- c("climate","housing","healthcare","immigration", "climatechange", "housingcrisis"),
+  terms <- c("climate","housing","healthcare","immigration", "climatechange", "housingcrisis")
   
   #hashtags to exclude (if broader analysis occurs)
   #hashtag_exclude = "",

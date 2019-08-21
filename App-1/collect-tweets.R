@@ -68,3 +68,34 @@ saveRDS(candidate_timelines, file = "./App-1/short_candidate_tl_joined.rds")
 
 
 
+# to stream tweets until the end of the election:----
+## set stream time
+timeout <- as.numeric(
+  difftime(as.POSIXct("2018-02-04 00:00:00"),
+           Sys.time(), tz = "US/Pacific", "secs")
+)
+
+## search terms
+rstudioconf <- c("rstudioconf", "rstudio::conf",
+                 "rstudioconference", "rstudioconference18",
+                 "rstudioconference2018", "rstudio18",
+                 "rstudioconf18", "rstudioconf2018",
+                 "rstudio::conf18", "rstudio::conf2018")
+
+## name of file to save output
+json_file <- file.path("data", "stream.json")
+
+## stream the tweets and write to "data/stream.json"
+stream_tweets(
+  q = paste(rstudioconf, collapse = ","),
+  timeout = timeout,
+  file_name = json_file,
+  parse = FALSE
+)
+
+## parse json data and convert to tibble
+rt <- parse_stream(json_file)
+
+
+
+
