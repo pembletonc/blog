@@ -1,0 +1,13 @@
+---
+title: Makeover Monday Data Visualization (Montreal dataviz meetup)
+author: Corey Pembleton
+date: '2019-11-20'
+slug: makeover-monday-data-visualization-montreal-dataviz-meetup
+categories: ["R", "Tutorial"]
+tags: ["visualization","dataexploration"]
+thumbnailImagePosition: "left"
+thumbnailImage: "/img/purrr.png"
+keywords: ["r-stats", "programming-tutorial", "data-viz"]
+draft: true
+---
+

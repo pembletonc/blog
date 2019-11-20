@@ -1,0 +1,60 @@
+---
+title: 'BYSH Chapter 1: Intro to Linear Models'
+author: Corey Pembleton
+date: '2019-11-09'
+slug: bysh-chapter-1-intro-to-linear-models
+categories: ["R", "Tutorial"]
+tags: ["tidymodels","statistics"]
+thumbnailImagePosition: "left"
+thumbnailImage: "/img/purrr.png"
+draft: true
+---
+
+
+
+<p>I’ve been exploring different ways of cleaning and presenting small datasets for some time, and have reached a point to need to brush up on my stats knowledge which with a few fairly simple tools can vastly improve the insights gathered from data.</p>
+<p>In this post, and hopefully a few upcoming posts, I’ll be going over the chapter questions found in the <a href="https://bookdown.org/roback/bookdown-bysh/ch-MLRreview.html">Broadening Your Statistical Horizons</a> online stats training book, which is an enormously useful resource for anyone looking to learn stats.</p>
+<p>The first thing covered is knowing when multiple linear regression can be used and not used. For example, data must fit a normal distribution or response variables cannot be binary (e.g. T/F). The assumptions for inference that must not be violated to use multilinear regression are:</p>
+<ul>
+<li>L: there is a linear relationship between the mean response (Y) and the explanatory variable (X),<br />
+</li>
+<li>I: the errors are independent—there’s no connection between how far any two points lie from the regression line,</li>
+<li>N: the responses are normally distributed at each level of X, and</li>
+<li>E: the variance or, equivalently, the standard deviation of the responses is equal for all levels of X.</li>
+</ul>
+<div id="question-1-applications-that-dont-violate-the-ols-assumptions-for-inference" class="section level3">
+<h3>Question 1: Applications that don’t violate the OLS assumptions for inference:</h3>
+<p><em>Cricket Chirps. Researchers record the number of cricket chirps per minute and temperature during that time to investigate whether the number of chirps varies with the temperature.</em></p>
+<p>Response variable (y): Cricket Chirps<br />
+Explanatory variable (x): Temperature</p>
+<ul>
+<li>L: The number of chirps per minute is linearly related to temperature</li>
+<li>I: The relationship between the two are independent, knowing the # of chirps does not provide information on the temperature</li>
+<li>N: There is an assumed normal distribution between these two variables, temperature often has a normal distribution</li>
+<li>E: The standard deviation of the number of chirps is the same at a given temperature</li>
+</ul>
+<p><em>Women’s Heights. A random selection of women aged 20-24 years are selected and their shoe size is used to predict their height</em></p>
+<p>Response variable (y): Women’s height<br />
+Explanatory variable (x): Shoe size</p>
+<ul>
+<li>L: The mean height of women is linearly related to the size of shows</li>
+<li>I: The height of one woman is independent of the height of others in the stu dy.</li>
+<li>N: The height of women for a given shoe size is normally distributed</li>
+<li>E: The standard deviation of height at a given shoe size is the same</li>
+</ul>
+</div>
+<div id="question-2-applications-that-do-violate-the-assumptions-of-inference" class="section level3">
+<h3>Question 2: Applications that do violate the assumptions of inference</h3>
+<p><em>Low Birthweights. Researchers are attempting to see if socioeconomic status and parental stability are predictive of low birthweight. They classify a child as having a low birthweight if their birthweight is less than 2,500 grams.</em></p>
+<p>Response variable (y): birthweight
+Explanatory variable (x): socioeconomic status and parental stability</p>
+<ul>
+<li>L: The mean birthweight is not likely to be linearly related to socieconomic status. (?)</li>
+<li>I: Socioeconomic status and parental stability: these two explanatory variables may be in question</li>
+<li>N: birthweight is likely to be normally distributed</li>
+<li>E: The standard deviation of weight at given socioeconomic status is likely to be the same</li>
+</ul>
+<p><em>Clinical Trial I. A Phase II clinical trial is designed to compare the number of patients getting relief at different dose levels. 100 patients get dose A, 100 get dose B, and 100 get dose C.</em></p>
+<p>Response Variable (y): # of patients with relief
+Explanatory variable (x): Dose type</p>
+</div>
