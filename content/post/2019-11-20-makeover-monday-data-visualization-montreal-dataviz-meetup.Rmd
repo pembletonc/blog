@@ -8,6 +8,183 @@ tags: ["visualization","dataexploration"]
 thumbnailImagePosition: "left"
 thumbnailImage: "/img/purrr.png"
 keywords: ["r-stats", "programming-tutorial", "data-viz"]
-draft: true
 ---
+
+As a part of a Montreal-based meetup group that I've attended a few times (far less than I would like), I'm producing here a reproduction of a "Makeover Monday" data vizualization, of a UNESCO dataset found [here](http://tcg.uis.unesco.org/4-6-2-youth-adult-literacy-rate/).
+
+
+I'll be using a few packages for this project:
+
+```{r, warning=FALSE, message=FALSE}
+library(pacman)
+
+p_load("reactable", "tidyverse", "readxl", "DataExplorer")
+
+```
+
+Based on the visualization from UNESCO, it looks like some countries may be excluded from the dataset. Can explore this a bit further:
+
+```{r}
+#load the data (local)
+adult_lit <- readxl::read_xlsx("./literacy_rates.xlsx")
+glimpse(adult_lit)
+```
+
+There are 34 countries in the OECD, and looking closer at the UNESCO dataset, it looks like only some of them are included:
+```{r}
+#saved locally
+oecd <- read_csv("./oecd_countries.csv")
+
+countries <- oecd$name
+adult_lit %>% 
+  filter(Country %in% countries) %>% 
+  group_by(Country) %>% 
+  count() %>% 
+  reactable::reactable(searchable = T)
+
+```
+
+```{r}
+adult_lit %>% 
+  filter(Region == "Europe and Northern America") %>% 
+  group_by(Country) %>% 
+  count() %>% 
+  reactable::reactable(searchable = T)
+
+```
+
+
+Only some countries from Europe and North America are included, this is good to keep in mind when considering future analysis or visualization. 
+
+## Visualization
+
+Starting by looking at the overall rates across the regions, it looks like there are fluctuations since 2010 in Sub-Saharan Africa and Central and Southern Asia (keeping in mind the missing data in Europe and N. America):
+
+```{r, dpi=300, width = "50%"}
+adult_lit %>% 
+  group_by(Region, Year) %>% 
+  summarise(lit_rate_med=median(`Literacy rate`)) %>% 
+  ggplot(aes(x = Year, y=lit_rate_med, color= Region))+
+  geom_line(size=1)+
+  geom_point(size=1.5)+
+  ylab("Literact Rate (%)")+
+  expand_limits(y=0,x=2010)+
+  scale_y_continuous(labels =  scales::percent)+
+  cowplot::theme_minimal_grid()+
+  theme(legend.position = "bottom")
+
+```
+
+
+If I wanted to make a crude recreation of the UNESCO site without making a robust shiny app, I could plot it as a leaflet plot:
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(leaflet)
+library(geojsonio)
+file <- "https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json"
+WorldCountry <-geojsonio::geojson_read(x= file,what="sp")
+
+median_rate <- adult_lit %>% 
+  group_by(Country) %>% 
+  filter(Gender == "total") %>% 
+  summarise(median = median(`Literacy rate`))
+
+map_data <- 
+  WorldCountry[WorldCountry$name %in% unique(median_rate$Country),]
+
+bins <- seq(from=0,to= 1, by = .1) 
+pal <- colorBin("YlOrRd", domain = median_rate$median , bins = bins)
+
+labels <- sprintf(
+  "<strong>%s</strong><br/>%g Median Percent(Both Sexes) <sup></sup>",
+  unique(median_rate$Country), round(median_rate$median, 2)) %>% lapply(htmltools::HTML)
+
+map_lit <- 
+  leaflet(map_data) %>% 
+    addTiles() %>% 
+    addPolygons(fillColor = ~pal(median_rate$median),
+                weight = 1,
+                opacity = 1,
+                color = 'white',
+                dashArray = '3',
+                fillOpacity = 0.7,
+                highlight = highlightOptions(
+                  weight = 5,
+                  color = "#666",
+                  dashArray = "",
+                  fillOpacity = 0.7,
+                  bringToFront = TRUE),
+                label = labels,
+                labelOptions = labelOptions(
+                  style = list("font-weight" = "normal", padding = "3px 8px"),
+                  textsize = "15px",
+                  direction = "auto"))
+
+map_lit
+```
+
+
+It would be interesting to combine this data with other socioeconomic variables:
+
+```{r, warning=FALSE, message=FALSE}
+#combine the gdp data
+gdp <- read_csv("./gdp_per_cap.csv")
+gdp <- gdp %>% 
+  select(Country, gdp = Value, Year = Time) %>%
+  filter(Country %in% adult_lit$Country) 
+
+adult_lit_all_ages <- adult_lit %>% 
+  group_by(Region, Country, Year, Gender) %>% 
+  summarise(median_rate = median(`Literacy rate`)) %>%
+  left_join(gdp, by = c("Country", "Year"))
+```
+
+
+
+
+Literacy between the two genders represented also varies:
+
+```{r, dpi=500}
+
+adult_lit_all_ages %>% 
+  filter(!Gender %in% "total") %>% 
+  ggplot(aes(x = median_rate, fill = Gender))+
+  geom_density(alpha = 0.4)+
+  cowplot::theme_minimal_grid() +
+  xlab("Literacy Rate, All Ages")
+```
+
+```{r, dpi = 500}
+adult_lit_all_ages %>% 
+  filter(Year >= 2018, Gender != "total") %>% 
+  ggplot(aes(x=median_rate, y = fct_reorder(Country, median_rate)))+
+  geom_point(color = "blue", size = 2, shape = 21) +
+  geom_segment(aes(x = 0, 
+                   xend = median_rate,
+                   y = fct_reorder(Country, median_rate),
+                   yend = fct_reorder(Country, median_rate)),
+               color = "lightgrey")+
+  facet_wrap(~Gender) +
+  theme_minimal() +
+  xlab("Gender")+
+  ylab("")+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
+
+```
+
+
+Can examine the relationship between literacy, gender, and gdp per capita:
+
+```{r, dpi = 500, warning = FALSE}
+adult_lit_all_ages %>% 
+  filter(!Gender %in% "total") %>% 
+  ggplot(aes(x=median_rate, y=log2(gdp), colour = Gender, fill = Gender))+
+  geom_point(shape = 21, alpha = .45)+
+  scale_x_continuous(name = "Literacy Rate (log2)") +
+  scale_fill_manual(values = c(male = "#D55E00", female = "#0072B2"), guide = "none")+
+  scale_y_continuous(labels = scales::dollar_format())+
+  geom_smooth(method = "lm", se = F) +
+  cowplot::theme_minimal_grid()
+```
 
