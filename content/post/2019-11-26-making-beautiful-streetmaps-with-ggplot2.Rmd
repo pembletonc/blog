@@ -1,0 +1,236 @@
+---
+title: Making Beautiful Streetmaps with ggplot2
+author: Corey Pembleton
+date: '2019-11-26'
+slug: making-beautiful-streetmaps-with-ggplot2
+categories: ["R", "Tutorial"]
+tags: ["visualization","ggplot2","cartography"]
+thumbnailImagePosition: "left"
+thumbnailImage: "/img/osmhex.png"
+keywords: ["r-stats", "programming-tutorial", "data-viz"]
+---
+
+Since an undergrad I've found it difficult to create a really nice streetmap. They always tend to look cluttered, line widths for different streetypes are always a challenge...the list goes on. I found this [amazing post](https://ggplot2tutor.com/streetmaps/streetmaps/) (and site) created by [Christian Burkhart](https://twitter.com/Christi58451746) which gives some great tips on graphic design and data visualization. This post is largely a walk-through of the process he uses.
+
+```{r, warning=FALSE, message=FALSE}
+if(!require("pacman")) install.packages("pacman")
+p_load("osmdata", "tidyverse","sf")
+```
+
+
+Following the tutorial, I can extract the data for my city (Montreal) using the ```osmdata``` package:
+
+```{r, cache=TRUE}
+mtl_big_streets <- getbb("Montreal, Canada") %>% 
+  opq() %>% #querying function
+  add_osm_feature(key = "highway", value = c("motorway","primary",
+                  "secondary", "tertiary")) %>%
+  osmdata_sf() #returns query as sf type
+
+
+mtl_small_streets <- 
+  getbb("Montreal, Canada") %>% 
+  opq() %>% #querying function
+  add_osm_feature(key = "highway", value = c("residential", "living_street",
+                                             "unclassified", "service", "footway")) %>%
+  osmdata_sf() #returns query as sf type
+
+mtl_river <- 
+  getbb("Montreal, Canada") %>% 
+  opq() %>%
+  add_osm_feature(key = "waterway", value = "river") %>%
+  osmdata_sf()
+```
+
+And can check one of these files out in ggplot:
+
+```{r}
+ggplot() +
+  geom_sf(data = mtl_big_streets$osm_lines,
+          inherit.aes = FALSE,
+          color = "black",
+          size = .4,
+          alpha = .8)
+```
+
+Or all of the layers together, with a white background:
+
+```{r, dpi=500}
+mtl_map <- ggplot() +
+  geom_sf(data = mtl_big_streets$osm_lines,
+          inherit.aes = FALSE,
+          color = "steelblue",
+          size = .4,
+          alpha = .8) +
+  geom_sf(data = mtl_small_streets$osm_lines,
+          inherit.aes = FALSE,
+          color = "black", 
+          size = .4, 
+          alpha = .6) +
+  geom_sf(data = mtl_river$osm_lines,
+          inherit.aes = FALSE,
+          color = "black",
+          size = .2,
+          alpha = .5) +
+  coord_sf(xlim = c(-73.97416, -73.47430), 
+           ylim = c(45.41008, 45.70479),
+           expand = FALSE) 
+
+mtl_map_white <- mtl_map + theme_void()
+
+mtl_map_white
+```
+
+
+Or with black background:
+
+
+```{r}
+mtl_map_black <- ggplot() +
+  geom_sf(data = mtl_big_streets$osm_lines,
+          inherit.aes = FALSE,
+          color = "#7fc0ff",
+          size = .4,
+          alpha = .8) +
+  geom_sf(data = mtl_small_streets$osm_lines,
+          inherit.aes = FALSE,
+          color = "#ffbe7f", 
+          size = .4, 
+          alpha = .6) +
+  geom_sf(data = mtl_river$osm_lines,
+          inherit.aes = FALSE,
+          color = "#ffbe7f",
+          size = .2,
+          alpha = .5) +
+  coord_sf(xlim = c(-73.97416, -73.47430), 
+           ylim = c(45.41008, 45.70479),
+           expand = FALSE) +
+  theme_void()+
+  theme(plot.background = element_rect(fill = "#282828")
+        )
+
+mtl_map_black
+
+```
+
+This looks pretty good, but the size of Montreal seems to be bigger than the German city in the tutorial, and the roadways look a bit clustered and it's hard to see what is what exactly unless you're familiar with the city. 
+
+Following the tutorial, I could take an export of these maps and add a border and title in powerpoint, but I think I'd like to increase the scale a bit to a specific part of the city (my neighborhood) to see how that looks.
+
+```{r, warning=FALSE, message=FALSE, cache=TRUE}
+mile_end <- 
+  getbb("Montreal, Canada") %>% 
+  opq() %>% #querying function
+  add_osm_feature(key = "admin_level", value = "11") %>%
+  osmdata_sf() %>%  #returns query as sf type
+  unique_osmdata
+
+mile_end <- mile_end$osm_multipolygons %>% 
+  filter(name == "Mile End")
+
+ggplot() +
+  geom_sf(data = mile_end, #note that no longer need to extract subset
+          inherit.aes = FALSE,
+          fill = NA,
+          color = "white",
+          size = 1,
+          alpha = .8) +
+  geom_sf(data = mtl_big_streets$osm_lines,
+          inherit.aes = FALSE,
+          color = "#7fc0ff",
+          size = .4,
+          alpha = .8) +
+  geom_sf(data = mtl_small_streets$osm_lines,
+          inherit.aes = FALSE,
+          color = "#ffbe7f", 
+          size = .4, 
+          alpha = .6) +
+  coord_sf(xlim = c(-73.6161, -73.5762), 
+           ylim = c(45.5312, 45.5146),
+           expand = FALSE) +
+  theme_void()+
+  theme(plot.background = element_rect(fill = "#282828")
+  )
+
+```
+
+
+I think that looks far less cluttered than the full-scale city map. Next I'd like to emphasize/accentuate the streets within the neighborhood a bit more. First can test out clipping those roads I want using ```sf_intersect```:
+
+```{r, warning=FALSE, message=FALSE}
+
+intersect_big_streets <- st_intersection(mtl_big_streets$osm_lines, mile_end)
+intersect_small_streets <- st_intersection(mtl_small_streets$osm_lines, mile_end)
+
+mile_end_map <- ggplot() +
+  geom_sf(data = mile_end, #note that no longer need to extract subset
+          inherit.aes = FALSE,
+          fill = NA,
+          color = "white",
+          size = .8,
+          alpha = .8) +
+  geom_sf(data = mtl_big_streets$osm_lines,
+          inherit.aes = FALSE,
+          color = "#7fc0ff",
+          size = .4,
+          alpha = .8) +
+  geom_sf(data = mtl_small_streets$osm_lines,
+          inherit.aes = FALSE,
+          color = "#cc9865", 
+          size = .4, 
+          alpha = .6) +
+  geom_sf(data = intersect_big_streets,
+          inherit.aes = FALSE,
+          color = "#cbe5ff",
+          size = .4,
+          alpha = .8) +
+  geom_sf(data = intersect_small_streets,
+          inherit.aes = FALSE,
+          color = "#ffd1a5", 
+          size = .4, 
+          alpha = .5) +
+  coord_sf(xlim = c(-73.6161, -73.5762), 
+           ylim = c(45.5312, 45.5146),
+           expand = FALSE) +
+  theme_void()+
+  theme(plot.background = element_rect(fill = "#282828")
+  )
+
+mile_end_map
+
+```
+
+I like that, and think it could be accentuated even more with some building polygons within the neighborhood:
+
+```{r, warning=FALSE, message=FALSE}
+buildings <- 
+  opq(c(-73.6161,45.5312,-73.5762,45.5146)) %>% #querying function from mile end bbox
+  add_osm_feature(key = "building", value = c("apartments", "commercial", "church","school",
+                                              "civic","house","supermarket","temple","synagogue",
+                                              "office","warehouse","mosque","government","university",
+                                              "residential", "yes")) %>%
+  osmdata_sf() %>%  #returns query as sf type
+  unique_osmdata
+
+buildings_mile_end <- st_intersection(buildings$osm_polygons, mile_end)
+
+#note that need to re-add the coord_sf:
+mile_end_map <-
+  mile_end_map +
+  geom_sf(data = buildings_mile_end,
+          inherit.aes = FALSE,
+          color = "#a4f9f7",
+          size = .1,
+          alpha = .7,
+          fill = "#a4f9f7") +
+  coord_sf(xlim = c(-73.6161, -73.5762), 
+           ylim = c(45.5312, 45.5146),
+           expand = FALSE)
+
+```
+
+A last touch would be a title, something that the author of the blog I'm copying did in Powerpoint, but can also be done in R directly using some combo of ```ggforce``` which I haven't quite got the hang of yet...so I've also done it in ppt here with a final exported image (at 800 dpi) included:
+
+![](/img/mile-end-final.png)
+
+Not bad, I'm colourblind so think that I could definitely play with the colours a bit, but for now, I'm pretty happy with that result! Super easy using the ```osmdata``` package!
