@@ -14,7 +14,7 @@ keywords: ["r-stats", "programming-tutorial", "data-viz"]
 
 <p>Since an undergrad I’ve found it difficult to create a really nice streetmap. They always tend to look cluttered, line widths for different streetypes are always a challenge…the list goes on. I found this <a href="https://ggplot2tutor.com/streetmaps/streetmaps/">amazing post</a> (and site) created by <a href="https://twitter.com/Christi58451746">Christian Burkhart</a> which gives some great tips on graphic design and data visualization. This post is largely a walk-through of the process he uses.</p>
 <pre class="r"><code>if(!require(&quot;pacman&quot;)) install.packages(&quot;pacman&quot;)
-p_load(&quot;osmdata&quot;, &quot;tidyverse&quot;,&quot;sf&quot;)</code></pre>
+pacman::p_load(&quot;osmdata&quot;, &quot;tidyverse&quot;,&quot;sf&quot;)</code></pre>
 <p>Following the tutorial, I can extract the data for my city (Montreal) using the <code>osmdata</code> package:</p>
 <pre class="r"><code>mtl_big_streets &lt;- getbb(&quot;Montreal, Canada&quot;) %&gt;% 
   opq() %&gt;% #querying function
@@ -196,4 +196,39 @@ mile_end_map &lt;-
            expand = FALSE)</code></pre>
 <p>A last touch would be a title, something that the author of the blog I’m copying did in Powerpoint, but can also be done in R directly using some combo of <code>ggforce</code> which I haven’t quite got the hang of yet…so I’ve also done it in ppt here with a final exported image (at 800 dpi) included:</p>
 <p><img src="/img/mile-end-final.png" /></p>
+<p>With a white background it also looks good, would need a bit more work with post-processing to get to a publishable level, but after running through powerpoint the result isn’t terrible either:</p>
+<pre class="r"><code>ggplot() +
+  geom_sf(data = mtl_big_streets$osm_lines,
+          inherit.aes = FALSE,
+          color = &quot;#bfbfbf&quot;,
+          size = .4,
+          alpha = .8) +
+  geom_sf(data = mtl_small_streets$osm_lines,
+          inherit.aes = FALSE,
+          color = &quot;#bfbfbf&quot;, 
+          size = .4, 
+          alpha = .6) +
+  geom_sf(data = intersect_big_streets,
+          inherit.aes = FALSE,
+          color = &quot;#737373&quot;,
+          size = .4,
+          alpha = .8) +
+  geom_sf(data = intersect_small_streets,
+          inherit.aes = FALSE,
+          color = &quot;#737373&quot;, 
+          size = .4, 
+          alpha = .5) +
+  geom_sf(data = buildings_mile_end,
+          inherit.aes = FALSE,
+          color = &quot;white&quot;,
+          size = .1,
+          alpha = .7,
+          fill = &quot;#737373&quot;) +
+  coord_sf(xlim = c(-73.6150, -73.5762), 
+           ylim = c(45.5312, 45.5146),
+           expand = FALSE) +
+  theme_void()
+#+
+  #theme(plot.background = element_rect(fill = &quot;#282828&quot;))</code></pre>
+<p><img src="/img/mile_end_gray_clean.png" /></p>
 <p>Not bad, I’m colourblind so think that I could definitely play with the colours a bit, but for now, I’m pretty happy with that result! Super easy using the <code>osmdata</code> package!</p>
