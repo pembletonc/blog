@@ -7,6 +7,9 @@ slug: opennorth-maps-crowdsourced-open-science-project
 categories: [ "R", "dataexploration"]
 tags: ["data cleaning", "statistics", "crowdsourcing"]
 keywords: ["tech", "R", "rmarkdown", "opendata"]
+output:
+  blogdown::html_page:
+    highlight: tango
 ---
 
 ```{r setup, include=FALSE}

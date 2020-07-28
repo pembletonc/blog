@@ -8,6 +8,9 @@ categories: [ "R", "dataexploration"]
 tags: ["data cleaning", "statistics", "naniar", "tidyverse", "kableExtra"]
 thumbnailImagePosition: "left"
 thumbnailImage: "/img/naniar.png"
+output:
+  blogdown::html_page:
+    highlight: tango
 ---
 
 ```{r setup, include=FALSE}

@@ -9,6 +9,9 @@ tags: ["purrr", "tidyverse", "kableExtra", "pandoc", "knitr"]
 keywords: ["tech", "R", "rmarkdown", "LaTeX", "pandoc"]
 thumbnailImagePosition: "right"
 thumbnailImage: "/img/hex-rmarkdown.png"
+output:
+  blogdown::html_page:
+    highlight: tango
 ---
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)

@@ -7,6 +7,9 @@ categories: ["R", "Tutorial"]
 tags: ["purrr"]
 thumbnailImagePosition: "left"
 thumbnailImage: "/img/purrr.png"
+output:
+  blogdown::html_page:
+    highlight: tango
 ---
 
 
