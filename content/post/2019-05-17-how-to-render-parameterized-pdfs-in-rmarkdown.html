@@ -2,15 +2,81 @@
 title: "How to render parameterized pdfs in rmarkdown" 
 author: "Corey Pembleton"
 date: '2019-05-19'
-output: html_document
 slug: how-to-render-parameterized-pdfs-in-rmarkdown
 categories: ["R", "Tutorial"]
 tags: ["purrr", "tidyverse", "kableExtra", "pandoc", "knitr"]
 keywords: ["tech", "R", "rmarkdown", "LaTeX", "pandoc"]
 thumbnailImagePosition: "right"
 thumbnailImage: "/img/hex-rmarkdown.png"
+output:
+  blogdown::html_page:
+    highlight: tango
 ---
 
+<style type="text/css">
+code.sourceCode > span { display: inline-block; line-height: 1.25; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode { white-space: pre; position: relative; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+code.sourceCode { white-space: pre-wrap; }
+code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  background-color: #f8f8f8; }
+@media screen {
+code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ef2929; } /* Alert */
+code span.an { color: #8f5902; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #c4a000; } /* Attribute */
+code span.bn { color: #0000cf; } /* BaseN */
+code span.cf { color: #204a87; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4e9a06; } /* Char */
+code span.cn { color: #000000; } /* Constant */
+code span.co { color: #8f5902; font-style: italic; } /* Comment */
+code span.cv { color: #8f5902; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #8f5902; font-weight: bold; font-style: italic; } /* Documentation */
+code span.dt { color: #204a87; } /* DataType */
+code span.dv { color: #0000cf; } /* DecVal */
+code span.er { color: #a40000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #0000cf; } /* Float */
+code span.fu { color: #000000; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #204a87; font-weight: bold; } /* Keyword */
+code span.op { color: #ce5c00; font-weight: bold; } /* Operator */
+code span.ot { color: #8f5902; } /* Other */
+code span.pp { color: #8f5902; font-style: italic; } /* Preprocessor */
+code span.sc { color: #000000; } /* SpecialChar */
+code span.ss { color: #4e9a06; } /* SpecialString */
+code span.st { color: #4e9a06; } /* String */
+code span.va { color: #000000; } /* Variable */
+code span.vs { color: #4e9a06; } /* VerbatimString */
+code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
+</style>
 
 
 <p>Making (PDF) reports iteratively using R is something I’ve wanted to learn to do for some time. In most cases, clients, colleagues, and managers don’t want html files, they want a single, succinct document which is consistently formatted and branded. After running into several roadblocks trying to create an iterative report, I decided to compile the various stackoverflow posts and blogs into one post here going over the basics of <code>rmarkdown::render()</code>, LaTeX, and <code>purrr::pmap()</code>.</p>
@@ -27,43 +93,43 @@ thumbnailImage: "/img/hex-rmarkdown.png"
 KableExtra is (IMO) the simplest, most consistent, and best looking table development package for html table creation in rmarkdown. To use it with PDFs, a few extra steps are needed.</p>
 <p>First, in the code-chunk: it’s pretty much the same as when creating html tables, with the difference of needing to ensure you set the type to “latex”, and for text-heavy columns you’ll need to specifiy the column width with <code>column_spec()</code>, else the column text will run over the page’s width.</p>
 <p>For more details on this formatting tables in LaTeX / KableExtra, check this sister reference document to the html version of KableExtra for html tables, Hao Zhu has created a very detailed <a href="http://haozhu233.github.io/kableExtra/awesome_table_in_pdf.pdf">“Create Awesome LaTeX Tables with KableExtra(pdf)”</a>.</p>
-<pre class="r"><code>library(kableExtra)
-
-kable(table, &quot;latex&quot;, booktabs = TRUE) %&gt;% 
-  kable_styling(latex_options = &quot;striped&quot;) %&gt;% 
-  column_spec(1, bold = T) %&gt;% 
-  column_spec(2, width = &quot;50em&quot;, border_left = T)</code></pre>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a><span class="kw">library</span>(kableExtra)</span>
+<span id="cb1-2"><a href="#cb1-2"></a></span>
+<span id="cb1-3"><a href="#cb1-3"></a><span class="kw">kable</span>(table, <span class="st">&quot;latex&quot;</span>, <span class="dt">booktabs =</span> <span class="ot">TRUE</span>) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb1-4"><a href="#cb1-4"></a><span class="st">  </span><span class="kw">kable_styling</span>(<span class="dt">latex_options =</span> <span class="st">&quot;striped&quot;</span>) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb1-5"><a href="#cb1-5"></a><span class="st">  </span><span class="kw">column_spec</span>(<span class="dv">1</span>, <span class="dt">bold =</span> T) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb1-6"><a href="#cb1-6"></a><span class="st">  </span><span class="kw">column_spec</span>(<span class="dv">2</span>, <span class="dt">width =</span> <span class="st">&quot;50em&quot;</span>, <span class="dt">border_left =</span> T)</span></code></pre></div>
 <p>Second, in order for the table to be visible, you’ll need to adjust the YAML further, directly adding the necessary LaTeX table packages under <code>header-includes</code>:</p>
-<pre class="r"><code>---
-header-includes:
-- \usepackage{booktabs}
-- \usepackage{longtable}
-- \usepackage{array}
-- \usepackage{multirow}
-- \usepackage[table]{xcolor}
-- \usepackage{wrapfig}
-- \usepackage{float}
-- \usepackage{colortbl}
-- \usepackage{pdflscape}
-- \usepackage{tabu}
-- \usepackage{threeparttable}
-- \usepackage[normalem]{ulem}
-- \usepackage{fancyhdr}
-- \usepackage{graphicx}
-- \usepackage{eurosym}
-- \usepackage{booktabs,xcolor} 
----</code></pre>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a><span class="op">---</span></span>
+<span id="cb2-2"><a href="#cb2-2"></a>header<span class="op">-</span>includes<span class="op">:</span></span>
+<span id="cb2-3"><a href="#cb2-3"></a><span class="op">-</span><span class="st"> </span>\usepackage{booktabs}</span>
+<span id="cb2-4"><a href="#cb2-4"></a><span class="op">-</span><span class="st"> </span>\usepackage{longtable}</span>
+<span id="cb2-5"><a href="#cb2-5"></a><span class="op">-</span><span class="st"> </span>\usepackage{array}</span>
+<span id="cb2-6"><a href="#cb2-6"></a><span class="op">-</span><span class="st"> </span>\usepackage{multirow}</span>
+<span id="cb2-7"><a href="#cb2-7"></a><span class="op">-</span><span class="st"> </span>\usepackage[table]{xcolor}</span>
+<span id="cb2-8"><a href="#cb2-8"></a><span class="op">-</span><span class="st"> </span>\usepackage{wrapfig}</span>
+<span id="cb2-9"><a href="#cb2-9"></a><span class="op">-</span><span class="st"> </span>\usepackage{float}</span>
+<span id="cb2-10"><a href="#cb2-10"></a><span class="op">-</span><span class="st"> </span>\usepackage{colortbl}</span>
+<span id="cb2-11"><a href="#cb2-11"></a><span class="op">-</span><span class="st"> </span>\usepackage{pdflscape}</span>
+<span id="cb2-12"><a href="#cb2-12"></a><span class="op">-</span><span class="st"> </span>\usepackage{tabu}</span>
+<span id="cb2-13"><a href="#cb2-13"></a><span class="op">-</span><span class="st"> </span>\usepackage{threeparttable}</span>
+<span id="cb2-14"><a href="#cb2-14"></a><span class="op">-</span><span class="st"> </span>\usepackage[normalem]{ulem}</span>
+<span id="cb2-15"><a href="#cb2-15"></a><span class="op">-</span><span class="st"> </span>\usepackage{fancyhdr}</span>
+<span id="cb2-16"><a href="#cb2-16"></a><span class="op">-</span><span class="st"> </span>\usepackage{graphicx}</span>
+<span id="cb2-17"><a href="#cb2-17"></a><span class="op">-</span><span class="st"> </span>\usepackage{eurosym}</span>
+<span id="cb2-18"><a href="#cb2-18"></a><span class="op">-</span><span class="st"> </span>\usepackage{booktabs,xcolor} </span>
+<span id="cb2-19"><a href="#cb2-19"></a><span class="op">---</span></span></code></pre></div>
 <p><strong>Adding header and footer images</strong></p>
 <p>A last style point is adding images into the headers and footers. I’ve used two LaTeX packages for this, <code>\fancyhdr</code> and <code>\wallpaper</code>. I still haven’t worked out how to format the images perfectly, but more or less you link the header/footer images and their setting in the YAML as well under <code>header-includes</code>:</p>
-<pre class="r"><code>---
-header-includes:
-- \addtolength{\headheight}{1.50cm}
-- \rhead{Community Solutions Network One-to-One Advisory Service - \today} 
-- \lhead{\includegraphics[width=4cm]{logo_h.jpg}} 
-- \setlength\footskip{5pt}
-- \LRCornerWallPaper{.50}{footer_logo.jpg}
-- \fancypagestyle{plain}{\pagestyle{fancy}}
----</code></pre>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1"></a><span class="op">---</span></span>
+<span id="cb3-2"><a href="#cb3-2"></a>header<span class="op">-</span>includes<span class="op">:</span></span>
+<span id="cb3-3"><a href="#cb3-3"></a><span class="op">-</span><span class="st"> </span>\addtolength{\headheight}{<span class="fl">1.50</span>cm}</span>
+<span id="cb3-4"><a href="#cb3-4"></a><span class="op">-</span><span class="st"> </span>\rhead{Community Solutions Network One<span class="op">-</span>to<span class="op">-</span>One Advisory Service <span class="op">-</span><span class="st"> </span>\today} </span>
+<span id="cb3-5"><a href="#cb3-5"></a><span class="op">-</span><span class="st"> </span>\lhead{\includegraphics[width=4cm]{logo_h.jpg}} </span>
+<span id="cb3-6"><a href="#cb3-6"></a><span class="op">-</span><span class="st"> </span>\setlength\footskip{5pt}</span>
+<span id="cb3-7"><a href="#cb3-7"></a><span class="op">-</span><span class="st"> </span>\LRCornerWallPaper{.<span class="dv">50</span>}{footer_logo.jpg}</span>
+<span id="cb3-8"><a href="#cb3-8"></a><span class="op">-</span><span class="st"> </span>\fancypagestyle{plain}{\pagestyle{fancy}}</span>
+<span id="cb3-9"><a href="#cb3-9"></a><span class="op">---</span></span></code></pre></div>
 </div>
 <div id="creating-custom-reports-iteratively" class="section level2">
 <h2>Creating custom reports iteratively</h2>
@@ -72,60 +138,59 @@ header-includes:
 <h3>Setting up a parameterized Rmarkdown template</h3>
 <p>Setting parameters in an RMarkdown is a way of referencing a file or dataset once in the YAML so the text within the script doesn’t need to change every time, just the param reference.</p>
 <p>For example, here I have two parameters set, one which inserts images from another directory, and another which is a call to a dataset:</p>
-<pre class="r"><code>---
-title: &quot;Title&quot;
-mainfont: Arial
-output:
-    pdf_document:
-      latex_engine: xelatex
-      fig_caption: false
-      fig_height: 4
-geometry: margin=.5in
-params:
-    images_params: !r list.files(path = &quot;./images/&quot;, pattern = &quot;\\.jpg$&quot;, full.names = TRUE)
-    data: mtcars
----</code></pre>
-<p>Under <code>params:</code> setting, !r is used for inline r code within the YAML. For more information on what YAML settings are availale with <code>pdf_output</code>, check <a href="www.rstudio.com%2Fwp-content%2Fuploads%2F2015%2F03%2Frmarkdown-reference.pdf">this rmarkdown guide (pdf)</a>.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1"></a><span class="op">---</span></span>
+<span id="cb4-2"><a href="#cb4-2"></a>title<span class="op">:</span><span class="st"> &quot;Title&quot;</span></span>
+<span id="cb4-3"><a href="#cb4-3"></a>mainfont<span class="op">:</span><span class="st"> </span>Arial</span>
+<span id="cb4-4"><a href="#cb4-4"></a>output<span class="op">:</span></span>
+<span id="cb4-5"><a href="#cb4-5"></a><span class="st">    </span>pdf_document<span class="op">:</span></span>
+<span id="cb4-6"><a href="#cb4-6"></a><span class="st">      </span>latex_engine<span class="op">:</span><span class="st"> </span>xelatex</span>
+<span id="cb4-7"><a href="#cb4-7"></a>      fig_caption<span class="op">:</span><span class="st"> </span>false</span>
+<span id="cb4-8"><a href="#cb4-8"></a>      fig_height<span class="op">:</span><span class="st"> </span><span class="dv">4</span></span>
+<span id="cb4-9"><a href="#cb4-9"></a>geometry<span class="op">:</span><span class="st"> </span>margin=.5in</span>
+<span id="cb4-10"><a href="#cb4-10"></a>params<span class="op">:</span></span>
+<span id="cb4-11"><a href="#cb4-11"></a><span class="st">    </span>images_params<span class="op">:</span><span class="st"> </span><span class="op">!</span>r <span class="kw">list.files</span>(<span class="dt">path =</span> <span class="st">&quot;./images/&quot;</span>, <span class="dt">pattern =</span> <span class="st">&quot;</span><span class="ch">\\</span><span class="st">.jpg$&quot;</span>, <span class="dt">full.names =</span> <span class="ot">TRUE</span>)</span>
+<span id="cb4-12"><a href="#cb4-12"></a>    data<span class="op">:</span><span class="st"> </span>mtcars</span>
+<span id="cb4-13"><a href="#cb4-13"></a><span class="op">---</span></span></code></pre></div>
+<p>Under <code>params:</code> setting, !r is used for inline r code within the YAML.
+For more information on what YAML settings are availale with <code>pdf_output</code>, check <a href="www.rstudio.com%2Fwp-content%2Fuploads%2F2015%2F03%2Frmarkdown-reference.pdf">this rmarkdown guide (pdf)</a>.</p>
 <p>Using parameters in the .Rmd is done by calling params$. within r functions</p>
-<pre class="r"><code>#to include the images from the directory:
-knitr::include_graphics(params$images_params)
-
-#calling the dataset directly
-
-head(params$data, n = 10)</code></pre>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1"></a><span class="co">#to include the images from the directory:</span></span>
+<span id="cb5-2"><a href="#cb5-2"></a>knitr<span class="op">::</span><span class="kw">include_graphics</span>(params<span class="op">$</span>images_params)</span>
+<span id="cb5-3"><a href="#cb5-3"></a></span>
+<span id="cb5-4"><a href="#cb5-4"></a><span class="co">#calling the dataset directly</span></span>
+<span id="cb5-5"><a href="#cb5-5"></a></span>
+<span id="cb5-6"><a href="#cb5-6"></a><span class="kw">head</span>(params<span class="op">$</span>data, <span class="dt">n =</span> <span class="dv">10</span>)</span></code></pre></div>
 <p>The first <code>include_graphics()</code> call isn’t very useful in its current state for inserting a single image, as it will insert all images within the directory (or whatever line of code is here), but that will come useful later when we need to iterate.</p>
 </div>
 </div>
 <div id="setting-up-the-r-script" class="section level2">
 <h2>Setting up the R script</h2>
 <p>Once the .Rmd is ready to go, the &lt;20 lines of r script can be written which will do iteration leg work. I’ve copied it pretty much line for line from <a href="https://medium.com/@urban_institute/iterated-fact-sheets-with-r-markdown-d685eb4eafce">this</a> helpful script provided by the Urban Institute.</p>
-<pre class="r"><code>library(tidyverse)</code></pre>
-<pre><code>## -- Attaching packages ------------------------------------------------------ tidyverse 1.2.1 --</code></pre>
-<pre><code>## v ggplot2 3.1.0       v purrr   0.3.2  
-## v tibble  2.1.1       v dplyr   0.8.0.1
-## v tidyr   0.8.3       v stringr 1.4.0  
-## v readr   1.3.1       v forcats 0.4.0</code></pre>
-<pre><code>## Warning: package &#39;tibble&#39; was built under R version 3.5.3</code></pre>
-<pre><code>## Warning: package &#39;purrr&#39; was built under R version 3.5.3</code></pre>
-<pre><code>## -- Conflicts --------------------------------------------------------- tidyverse_conflicts() --
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1"></a><span class="kw">library</span>(tidyverse)</span></code></pre></div>
+<pre><code>## ── Attaching packages ─────────────────────────────────────────────────────────────────────────────────────── tidyverse 1.3.0 ──</code></pre>
+<pre><code>## ✓ ggplot2 3.3.1     ✓ purrr   0.3.4
+## ✓ tibble  3.0.1     ✓ dplyr   1.0.0
+## ✓ tidyr   1.1.0     ✓ stringr 1.4.0
+## ✓ readr   1.3.1     ✓ forcats 0.5.0</code></pre>
+<pre><code>## ── Conflicts ────────────────────────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
 ## x dplyr::filter() masks stats::filter()
 ## x dplyr::lag()    masks stats::lag()</code></pre>
-<pre class="r"><code>path &lt;- tools::file_path_sans_ext(
-  list.files(path = &quot;./images/&quot;,
-             pattern = &quot;\\.jpg$&quot;,
-             full.names = F))
-
-images_params &lt;- list.files(path = &quot;./images/&quot;,
-                            pattern = &quot;\\.jpg$&quot;, 
-                            full.names = T)
-reports &lt;- tibble(
-  output_file = stringr::str_c(&quot;score_card_email/&quot;, path, &quot;.pdf&quot;),
-  params = map(images_params, ~list(images_params = .))
-)
-
-#not sure if setting the envir = new.env() is needed, but some feedback on SO gave this solution
-reports %&gt;% pwalk(rmarkdown::render, 
-                  input = &quot;./Scripts/08 - Questionnaire_Results_Email_Attachment.Rmd&quot;,
-                  &quot;pdf_document&quot;, envir = new.env())</code></pre>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1"></a>path &lt;-<span class="st"> </span>tools<span class="op">::</span><span class="kw">file_path_sans_ext</span>(</span>
+<span id="cb10-2"><a href="#cb10-2"></a>  <span class="kw">list.files</span>(<span class="dt">path =</span> <span class="st">&quot;./images/&quot;</span>,</span>
+<span id="cb10-3"><a href="#cb10-3"></a>             <span class="dt">pattern =</span> <span class="st">&quot;</span><span class="ch">\\</span><span class="st">.jpg$&quot;</span>,</span>
+<span id="cb10-4"><a href="#cb10-4"></a>             <span class="dt">full.names =</span> F))</span>
+<span id="cb10-5"><a href="#cb10-5"></a></span>
+<span id="cb10-6"><a href="#cb10-6"></a>images_params &lt;-<span class="st"> </span><span class="kw">list.files</span>(<span class="dt">path =</span> <span class="st">&quot;./images/&quot;</span>,</span>
+<span id="cb10-7"><a href="#cb10-7"></a>                            <span class="dt">pattern =</span> <span class="st">&quot;</span><span class="ch">\\</span><span class="st">.jpg$&quot;</span>, </span>
+<span id="cb10-8"><a href="#cb10-8"></a>                            <span class="dt">full.names =</span> T)</span>
+<span id="cb10-9"><a href="#cb10-9"></a>reports &lt;-<span class="st"> </span><span class="kw">tibble</span>(</span>
+<span id="cb10-10"><a href="#cb10-10"></a>  <span class="dt">output_file =</span> stringr<span class="op">::</span><span class="kw">str_c</span>(<span class="st">&quot;score_card_email/&quot;</span>, path, <span class="st">&quot;.pdf&quot;</span>),</span>
+<span id="cb10-11"><a href="#cb10-11"></a>  <span class="dt">params =</span> <span class="kw">map</span>(images_params, <span class="op">~</span><span class="kw">list</span>(<span class="dt">images_params =</span> .))</span>
+<span id="cb10-12"><a href="#cb10-12"></a>)</span>
+<span id="cb10-13"><a href="#cb10-13"></a></span>
+<span id="cb10-14"><a href="#cb10-14"></a><span class="co">#not sure if setting the envir = new.env() is needed, but some feedback on SO gave this solution</span></span>
+<span id="cb10-15"><a href="#cb10-15"></a>reports <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">pwalk</span>(rmarkdown<span class="op">::</span>render, </span>
+<span id="cb10-16"><a href="#cb10-16"></a>                  <span class="dt">input =</span> <span class="st">&quot;./Scripts/08 - Questionnaire_Results_Email_Attachment.Rmd&quot;</span>,</span>
+<span id="cb10-17"><a href="#cb10-17"></a>                  <span class="st">&quot;pdf_document&quot;</span>, <span class="dt">envir =</span> <span class="kw">new.env</span>())</span></code></pre></div>
 <p>What the <code>pwalk()</code> call with <code>render()</code> does is renders a new PDF for each item in params list in the dataframe. Pretty easy!</p>
 </div>

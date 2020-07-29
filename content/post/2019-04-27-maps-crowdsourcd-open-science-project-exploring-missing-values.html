@@ -2,15 +2,81 @@
 title: "MAPS Crowdsourced Open Science Project: Data Exploration"
 author: "Corey Pembleton"
 date: '2019-04-27'
-output: html_document
 slug: crowdsourced-open-science-project-data-exploration
 categories: [ "R", "dataexploration"]
 tags: ["data cleaning", "statistics", "naniar", "tidyverse", "kableExtra"]
 thumbnailImagePosition: "left"
 thumbnailImage: "/img/naniar.png"
+output:
+  blogdown::html_page:
+    highlight: tango
 ---
 
 <script src="/rmarkdown-libs/kePrint/kePrint.js"></script>
+<style type="text/css">
+code.sourceCode > span { display: inline-block; line-height: 1.25; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode { white-space: pre; position: relative; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+code.sourceCode { white-space: pre-wrap; }
+code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  background-color: #f8f8f8; }
+@media screen {
+code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ef2929; } /* Alert */
+code span.an { color: #8f5902; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #c4a000; } /* Attribute */
+code span.bn { color: #0000cf; } /* BaseN */
+code span.cf { color: #204a87; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4e9a06; } /* Char */
+code span.cn { color: #000000; } /* Constant */
+code span.co { color: #8f5902; font-style: italic; } /* Comment */
+code span.cv { color: #8f5902; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #8f5902; font-weight: bold; font-style: italic; } /* Documentation */
+code span.dt { color: #204a87; } /* DataType */
+code span.dv { color: #0000cf; } /* DecVal */
+code span.er { color: #a40000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #0000cf; } /* Float */
+code span.fu { color: #000000; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #204a87; font-weight: bold; } /* Keyword */
+code span.op { color: #ce5c00; font-weight: bold; } /* Operator */
+code span.ot { color: #8f5902; } /* Other */
+code span.pp { color: #8f5902; font-style: italic; } /* Preprocessor */
+code span.sc { color: #000000; } /* SpecialChar */
+code span.ss { color: #4e9a06; } /* SpecialString */
+code span.st { color: #4e9a06; } /* String */
+code span.va { color: #000000; } /* Variable */
+code span.vs { color: #4e9a06; } /* VerbatimString */
+code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
+</style>
 
 
 <p>In <a href="">this</a> previous post, the OpenNorth team explained the goals of this research project, and now that I have access to the data, it’s time to dig in and have a look at the data used for the analysis, particularly to gain an understanding of the variables used in the 16 models tested, and where <code>NA</code> values can be found.</p>
@@ -22,30 +88,27 @@ thumbnailImage: "/img/naniar.png"
 <h3>Missing Data &amp; Imputations</h3>
 <p>The way the ALSPAC dataset was constructed means that there are large amounts of missing values (not all of the participants responded to all of the questions), in the original dataset this means that only 12.7% of participants had complete data on outcomes, exposure, and covariates. To address this, the research team uses imputation to fill in the gaps, using a method described as being similar to the Multiple Imputation by Chained Equations (MICE) method (described in detail <a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3074241/">here</a>). The impacts of this will be reviewed in the next post on this topic.</p>
 <p>The flow of how the authors arrived at only 12.7% of participants having completed the required outcomes/exposures/covariates looks like this, a process I’ll be replicating in this post.</p>
-<div class="figure">
-<img src="/img/data-flow.png" />
-
-</div>
+<p><img src="/img/data-flow.png" /></p>
 <div id="libraries-used" class="section level4">
 <h4>Libraries Used</h4>
 <p>I will be using <code>naniar</code> along with the usual <code>tidyverse</code> suspects throughout this post.</p>
-<pre class="r"><code>orig_dat &lt;- read_csv(&quot;https://raw.githubusercontent.com/pembletonc/OpenNorth_MAPS/master/maps-synthetic-data.csv&quot;) %&gt;% rename(ID = X1)</code></pre>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a>orig_dat &lt;-<span class="st"> </span><span class="kw">read_csv</span>(<span class="st">&quot;https://raw.githubusercontent.com/pembletonc/OpenNorth_MAPS/master/maps-synthetic-data.csv&quot;</span>) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">rename</span>(<span class="dt">ID =</span> X1)</span></code></pre></div>
 </div>
 </div>
 <div id="find-out-whats-missing" class="section level2">
 <h2>Find out what’s missing</h2>
 <p>As a first step, I would like to replicate the graphic in the figure above using the synthetic dataset provided by the Bristol research team.</p>
 <p>The second figure in the flow diagram features 14,665 “live born offspring (singletons and twins) who had not withdrawn from the study”, which is my entire population:</p>
-<pre class="r"><code>nrow(orig_dat)</code></pre>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a><span class="kw">nrow</span>(orig_dat)</span></code></pre></div>
 <pre><code>## [1] 13734</code></pre>
 <p>The synthetic dataset provided has 13,734 participants, 1,291 less than that used in the study. This difference isn’t explicitly explained in Robert Arbon’s articles, but it is implied that is the result of removing any rows in common with the original dataset.</p>
 <p>The next figure in the flow diagram, 4,562, is the number of participants who completed the CIS-R at the age of 18. This is either the variables <code>dep_score</code> or <code>dep_thoughts</code>:</p>
-<pre class="r"><code>orig_dat %&gt;% filter(!is.na(dep_score)) %&gt;% summarise(count=n())</code></pre>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1"></a>orig_dat <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">filter</span>(<span class="op">!</span><span class="kw">is.na</span>(dep_score)) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">summarise</span>(<span class="dt">count=</span><span class="kw">n</span>())</span></code></pre></div>
 <pre><code>## # A tibble: 1 x 1
 ##   count
 ##   &lt;int&gt;
 ## 1  4513</code></pre>
-<pre class="r"><code>orig_dat %&gt;% filter(!is.na(dep_thoughts)) %&gt;% summarise(count=n())</code></pre>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1"></a>orig_dat <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">filter</span>(<span class="op">!</span><span class="kw">is.na</span>(dep_thoughts)) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">summarise</span>(<span class="dt">count=</span><span class="kw">n</span>())</span></code></pre></div>
 <pre><code>## # A tibble: 1 x 1
 ##   count
 ##   &lt;int&gt;
@@ -53,49 +116,49 @@ thumbnailImage: "/img/naniar.png"
 <p>Looks like the score is the variable that has been used, with a value of 4,513.</p>
 <p>The third figure in the diagram, the exposure variable, is 3,009 participants with “exposure information at age 16”, meaning those who had screentime at the age of 16.</p>
 <p>The authors of the study look at three types of screen use on weekdays and weekends: television screens, texting, and computer screens. I have saved these variables for computer use as <code>vars_model1</code>:</p>
-<pre class="r"><code>#function to remove NA values from selection of variables
-
-filter.NA.fun &lt;- function(df, var){ 
-  
-  var &lt;- enquo(var)
-  
-  df %&gt;% 
-    select(one_of(!!var)) %&gt;%
-    filter_all(all_vars(!is.na(.))) %&gt;% 
-    summarise(count = n()) 
-  } 
-
-vars_model1 &lt;- c(&quot;dep_score&quot;, &quot;text_wend&quot;, &quot;text_week&quot;, &quot;tv_wend&quot;, &quot;tv_week&quot;,
-          &quot;comp_week&quot;, &quot;comp_wend&quot;)
-
-filter.NA.fun(orig_dat, vars_model1)</code></pre>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1"></a><span class="co">#function to remove NA values from selection of variables</span></span>
+<span id="cb8-2"><a href="#cb8-2"></a></span>
+<span id="cb8-3"><a href="#cb8-3"></a>filter.NA.fun &lt;-<span class="st"> </span><span class="cf">function</span>(df, var){ </span>
+<span id="cb8-4"><a href="#cb8-4"></a>  </span>
+<span id="cb8-5"><a href="#cb8-5"></a>  var &lt;-<span class="st"> </span><span class="kw">enquo</span>(var)</span>
+<span id="cb8-6"><a href="#cb8-6"></a>  </span>
+<span id="cb8-7"><a href="#cb8-7"></a>  df <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb8-8"><a href="#cb8-8"></a><span class="st">    </span><span class="kw">select</span>(<span class="kw">one_of</span>(<span class="op">!!</span>var)) <span class="op">%&gt;%</span></span>
+<span id="cb8-9"><a href="#cb8-9"></a><span class="st">    </span><span class="kw">filter_all</span>(<span class="kw">all_vars</span>(<span class="op">!</span><span class="kw">is.na</span>(.))) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb8-10"><a href="#cb8-10"></a><span class="st">    </span><span class="kw">summarise</span>(<span class="dt">count =</span> <span class="kw">n</span>()) </span>
+<span id="cb8-11"><a href="#cb8-11"></a>  } </span>
+<span id="cb8-12"><a href="#cb8-12"></a></span>
+<span id="cb8-13"><a href="#cb8-13"></a>vars_model1 &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;dep_score&quot;</span>, <span class="st">&quot;text_wend&quot;</span>, <span class="st">&quot;text_week&quot;</span>, <span class="st">&quot;tv_wend&quot;</span>, <span class="st">&quot;tv_week&quot;</span>,</span>
+<span id="cb8-14"><a href="#cb8-14"></a>          <span class="st">&quot;comp_week&quot;</span>, <span class="st">&quot;comp_wend&quot;</span>)</span>
+<span id="cb8-15"><a href="#cb8-15"></a></span>
+<span id="cb8-16"><a href="#cb8-16"></a><span class="kw">filter.NA.fun</span>(orig_dat, vars_model1)</span></code></pre></div>
 <pre><code>## # A tibble: 1 x 1
 ##   count
 ##   &lt;int&gt;
 ## 1  3043</code></pre>
 <p>Which gives a count of 3,043, not far from the original 3,009.</p>
 <p>In the second model, the authors look at the variables in model 1, with nine additional covariates:</p>
-<pre class="r"><code>vars_model2 &lt;- c(&quot;dep_score&quot;, &quot;text_wend&quot;, &quot;text_week&quot;, &quot;tv_wend&quot;, &quot;tv_week&quot;,
-                 &quot;comp_week&quot;, &quot;comp_wend&quot;, &quot;sex&quot;,&quot;anx_band_15&quot;,
-                 &quot;mat_anx_0m&quot;,&quot;mat_anx_1&quot;,&quot;mat_anx_18m&quot;, &quot;mat_anx_8m&quot;,
-                 &quot;mat_dep&quot;, &quot;mat_edu&quot;, &quot;mat_ses&quot;)
-
-
-filter.NA.fun(orig_dat, vars_model2)</code></pre>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1"></a>vars_model2 &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;dep_score&quot;</span>, <span class="st">&quot;text_wend&quot;</span>, <span class="st">&quot;text_week&quot;</span>, <span class="st">&quot;tv_wend&quot;</span>, <span class="st">&quot;tv_week&quot;</span>,</span>
+<span id="cb10-2"><a href="#cb10-2"></a>                 <span class="st">&quot;comp_week&quot;</span>, <span class="st">&quot;comp_wend&quot;</span>, <span class="st">&quot;sex&quot;</span>,<span class="st">&quot;anx_band_15&quot;</span>,</span>
+<span id="cb10-3"><a href="#cb10-3"></a>                 <span class="st">&quot;mat_anx_0m&quot;</span>,<span class="st">&quot;mat_anx_1&quot;</span>,<span class="st">&quot;mat_anx_18m&quot;</span>, <span class="st">&quot;mat_anx_8m&quot;</span>,</span>
+<span id="cb10-4"><a href="#cb10-4"></a>                 <span class="st">&quot;mat_dep&quot;</span>, <span class="st">&quot;mat_edu&quot;</span>, <span class="st">&quot;mat_ses&quot;</span>)</span>
+<span id="cb10-5"><a href="#cb10-5"></a></span>
+<span id="cb10-6"><a href="#cb10-6"></a></span>
+<span id="cb10-7"><a href="#cb10-7"></a><span class="kw">filter.NA.fun</span>(orig_dat, vars_model2)</span></code></pre></div>
 <pre><code>## # A tibble: 1 x 1
 ##   count
 ##   &lt;int&gt;
 ## 1  1945</code></pre>
 <p>reducing the count of participants to 1,945 for Model 2.</p>
 <p>Model 3 includes another 11 variables on top of those in Model 2, with 1,575 participants:</p>
-<pre class="r"><code>vars_model3 &lt;- c(&quot;dep_score&quot;, &quot;text_wend&quot;, &quot;text_week&quot;, &quot;tv_wend&quot;, &quot;tv_week&quot;,
-                 &quot;comp_week&quot;, &quot;comp_wend&quot;, &quot;sex&quot;,&quot;anx_band_15&quot;,
-                 &quot;mat_anx_0m&quot;,&quot;mat_anx_1&quot;,&quot;mat_anx_18m&quot;, &quot;mat_anx_8m&quot;,
-                 &quot;mat_dep&quot;, &quot;mat_edu&quot;, &quot;mat_ses&quot;, &quot;iq&quot;, &quot;pat_pres&quot;, 
-                 &quot;pat_pres_10&quot;, &quot;pat_pres_8&quot;, &quot;num_home&quot;, &quot;phys_cruel&quot;, &quot;emot_cruel&quot;,
-                 &quot;child_bull&quot;,&quot;fam_tv_aft&quot;, &quot;fam_tv_eve&quot;, &quot;fam_tv_mor&quot;)
-
-filter.NA.fun(orig_dat, vars_model3)</code></pre>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1"></a>vars_model3 &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;dep_score&quot;</span>, <span class="st">&quot;text_wend&quot;</span>, <span class="st">&quot;text_week&quot;</span>, <span class="st">&quot;tv_wend&quot;</span>, <span class="st">&quot;tv_week&quot;</span>,</span>
+<span id="cb12-2"><a href="#cb12-2"></a>                 <span class="st">&quot;comp_week&quot;</span>, <span class="st">&quot;comp_wend&quot;</span>, <span class="st">&quot;sex&quot;</span>,<span class="st">&quot;anx_band_15&quot;</span>,</span>
+<span id="cb12-3"><a href="#cb12-3"></a>                 <span class="st">&quot;mat_anx_0m&quot;</span>,<span class="st">&quot;mat_anx_1&quot;</span>,<span class="st">&quot;mat_anx_18m&quot;</span>, <span class="st">&quot;mat_anx_8m&quot;</span>,</span>
+<span id="cb12-4"><a href="#cb12-4"></a>                 <span class="st">&quot;mat_dep&quot;</span>, <span class="st">&quot;mat_edu&quot;</span>, <span class="st">&quot;mat_ses&quot;</span>, <span class="st">&quot;iq&quot;</span>, <span class="st">&quot;pat_pres&quot;</span>, </span>
+<span id="cb12-5"><a href="#cb12-5"></a>                 <span class="st">&quot;pat_pres_10&quot;</span>, <span class="st">&quot;pat_pres_8&quot;</span>, <span class="st">&quot;num_home&quot;</span>, <span class="st">&quot;phys_cruel&quot;</span>, <span class="st">&quot;emot_cruel&quot;</span>,</span>
+<span id="cb12-6"><a href="#cb12-6"></a>                 <span class="st">&quot;child_bull&quot;</span>,<span class="st">&quot;fam_tv_aft&quot;</span>, <span class="st">&quot;fam_tv_eve&quot;</span>, <span class="st">&quot;fam_tv_mor&quot;</span>)</span>
+<span id="cb12-7"><a href="#cb12-7"></a></span>
+<span id="cb12-8"><a href="#cb12-8"></a><span class="kw">filter.NA.fun</span>(orig_dat, vars_model3)</span></code></pre></div>
 <pre><code>## # A tibble: 1 x 1
 ##   count
 ##   &lt;int&gt;
@@ -106,18 +169,18 @@ filter.NA.fun(orig_dat, vars_model3)</code></pre>
 <p>“Each of the sub-models of model 4 additionally adjusted for time spent engaging in one other activity on weekdays or weekends (time alone [model 4a], on transport [model 4b], playing outdoors in summer [model 4c], playing outdoors in winter [model 4d], playing with others [model 4e], drawing, making or constructing things [model 4f], exercising [model 4g], completing school or college work [model 4h], reading [model 4i], playing musical instruments [model 4j], talking on a mobile phone [model 4k] and talking on a landline phone [model 4l]).”</p>
 </blockquote>
 <p>To get an idea of what the differences are in data availability across each of the models, I can test and review them using <code>purrr::map()</code> (variable model lists not shown)):</p>
-<pre class="r"><code>all_model_vars &lt;- list(vars_model1 = vars_model1, vars_model2 = vars_model2,
-                       vars_model3 = vars_model3,  vars_model4a = vars_model4a,
-                       vars_model4b = vars_model4b,
-                       vars_model4c = vars_model4c, vars_model4d = vars_model4d,
-                       vars_model4e = vars_model4e, vars_model4f = vars_model4f,
-                       vars_model4g = vars_model4g, vars_model4h = vars_model4h,
-                       vars_model4i = vars_model4i, vars_model4j = vars_model4j,
-                       vars_model4k = vars_model4k, vars_model4l = vars_model4l)
-
-map_df(all_model_vars, filter.NA.fun, df = orig_dat) %&gt;%
-  add_column(model = names(all_model_vars)) %&gt;% 
-  kableExtra::kable() %&gt;% kableExtra::kable_styling(bootstrap_options = c(&quot;striped&quot;))</code></pre>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1"></a>all_model_vars &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">vars_model1 =</span> vars_model1, <span class="dt">vars_model2 =</span> vars_model2,</span>
+<span id="cb14-2"><a href="#cb14-2"></a>                       <span class="dt">vars_model3 =</span> vars_model3,  <span class="dt">vars_model4a =</span> vars_model4a,</span>
+<span id="cb14-3"><a href="#cb14-3"></a>                       <span class="dt">vars_model4b =</span> vars_model4b,</span>
+<span id="cb14-4"><a href="#cb14-4"></a>                       <span class="dt">vars_model4c =</span> vars_model4c, <span class="dt">vars_model4d =</span> vars_model4d,</span>
+<span id="cb14-5"><a href="#cb14-5"></a>                       <span class="dt">vars_model4e =</span> vars_model4e, <span class="dt">vars_model4f =</span> vars_model4f,</span>
+<span id="cb14-6"><a href="#cb14-6"></a>                       <span class="dt">vars_model4g =</span> vars_model4g, <span class="dt">vars_model4h =</span> vars_model4h,</span>
+<span id="cb14-7"><a href="#cb14-7"></a>                       <span class="dt">vars_model4i =</span> vars_model4i, <span class="dt">vars_model4j =</span> vars_model4j,</span>
+<span id="cb14-8"><a href="#cb14-8"></a>                       <span class="dt">vars_model4k =</span> vars_model4k, <span class="dt">vars_model4l =</span> vars_model4l)</span>
+<span id="cb14-9"><a href="#cb14-9"></a></span>
+<span id="cb14-10"><a href="#cb14-10"></a><span class="kw">map_df</span>(all_model_vars, filter.NA.fun, <span class="dt">df =</span> orig_dat) <span class="op">%&gt;%</span></span>
+<span id="cb14-11"><a href="#cb14-11"></a><span class="st">  </span><span class="kw">add_column</span>(<span class="dt">model =</span> <span class="kw">names</span>(all_model_vars)) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb14-12"><a href="#cb14-12"></a><span class="st">  </span>kableExtra<span class="op">::</span><span class="kw">kable</span>() <span class="op">%&gt;%</span><span class="st"> </span>kableExtra<span class="op">::</span><span class="kw">kable_styling</span>(<span class="dt">bootstrap_options =</span> <span class="kw">c</span>(<span class="st">&quot;striped&quot;</span>))</span></code></pre></div>
 <table class="table table-striped" style="margin-left: auto; margin-right: auto;">
 <thead>
 <tr>
@@ -256,31 +319,31 @@ vars_model4l
 <h3>Exploring the missings</h3>
 <p>While the mystery of why the final figure isn’t solved, I can still explore what the missing values are in the dataset further using the <code>naniar</code> package, a step that will be useful when considering how to impute additional data later on.</p>
 <p>Looking at the first model, what is missing where?</p>
-<pre class="r"><code>orig_dat %&gt;% select(one_of(vars_model1)) %&gt;% naniar::gg_miss_upset()</code></pre>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1"></a>orig_dat <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">select</span>(<span class="kw">one_of</span>(vars_model1)) <span class="op">%&gt;%</span><span class="st"> </span>naniar<span class="op">::</span><span class="kw">gg_miss_upset</span>()</span></code></pre></div>
 <p><img src="/post/2019-04-27-maps-crowdsourcd-open-science-project-exploring-missing-values_files/figure-html/unnamed-chunk-9-1.png" width="672" /></p>
 <p>The majority of cases see missing values across all five variables together, although the amount of participants who haven’t completed the CIS-R at the age of 18, followed by those participants who didn’t report on screen use at the age of 16.</p>
 <p>Looking at the missing values another way, we can see how each variable may have inconsistencies across sexes:</p>
-<pre class="r"><code>orig_dat %&gt;% select(one_of(c(vars_model1, &quot;sex&quot;))) %&gt;%
-  naniar::gg_miss_var(show_pct = TRUE, facet = sex)</code></pre>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1"></a>orig_dat <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">select</span>(<span class="kw">one_of</span>(<span class="kw">c</span>(vars_model1, <span class="st">&quot;sex&quot;</span>))) <span class="op">%&gt;%</span></span>
+<span id="cb16-2"><a href="#cb16-2"></a><span class="st">  </span>naniar<span class="op">::</span><span class="kw">gg_miss_var</span>(<span class="dt">show_pct =</span> <span class="ot">TRUE</span>, <span class="dt">facet =</span> sex)</span></code></pre></div>
 <p><img src="/post/2019-04-27-maps-crowdsourcd-open-science-project-exploring-missing-values_files/figure-html/unnamed-chunk-10-1.png" width="672" /></p>
 <p>Surprisingly, there is consistently more missing values for female than male participants - this can be explored a bit further with a quick count:</p>
-<pre class="r"><code>orig_dat %&gt;% group_by(sex) %&gt;% summarise(count = n())</code></pre>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1"></a>orig_dat <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">group_by</span>(sex) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">summarise</span>(<span class="dt">count =</span> <span class="kw">n</span>())</span></code></pre></div>
 <pre><code>## # A tibble: 2 x 2
 ##   sex    count
 ##   &lt;chr&gt;  &lt;int&gt;
 ## 1 Female  7102
 ## 2 Male    6632</code></pre>
 <p>Surprisingly, the study has a column “sex” which has gender variables! But I stray from the point: there are 7,102 female and 6,632 male respondents, although this doesn’t speak to why there is proportional inconsistency.Looking at all variables shows a mostly consistent pattern when it comes to gender, so perhaps the distribution isn’t drastically different for the entire dataset:</p>
-<pre class="r"><code>orig_dat %&gt;% naniar::gg_miss_var(show_pct = TRUE, facet = sex) + ggtitle(&quot;% missing values, by sex and variable&quot;)</code></pre>
+<div class="sourceCode" id="cb19"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1"></a>orig_dat <span class="op">%&gt;%</span><span class="st"> </span>naniar<span class="op">::</span><span class="kw">gg_miss_var</span>(<span class="dt">show_pct =</span> <span class="ot">TRUE</span>, <span class="dt">facet =</span> sex) <span class="op">+</span><span class="st"> </span><span class="kw">ggtitle</span>(<span class="st">&quot;% missing values, by sex and variable&quot;</span>)</span></code></pre></div>
 <p><img src="/post/2019-04-27-maps-crowdsourcd-open-science-project-exploring-missing-values_files/figure-html/unnamed-chunk-12-1.png" width="672" /></p>
 <p>Another interesting variable not thoroughly explored in the study, is economic class of the parents of participants.</p>
 <p>Looking at maternal social standing first, it appears that Level (i) has a lower overall % of missing responses:</p>
-<pre class="r"><code>orig_dat %&gt;% select(one_of(c(vars_model1, &quot;mat_ses&quot;))) %&gt;%
-  naniar::gg_miss_var(show_pct = TRUE, facet = mat_ses) + ggtitle(&quot;% of missing values, by maternal social class&quot;)</code></pre>
+<div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1"></a>orig_dat <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">select</span>(<span class="kw">one_of</span>(<span class="kw">c</span>(vars_model1, <span class="st">&quot;mat_ses&quot;</span>))) <span class="op">%&gt;%</span></span>
+<span id="cb20-2"><a href="#cb20-2"></a><span class="st">  </span>naniar<span class="op">::</span><span class="kw">gg_miss_var</span>(<span class="dt">show_pct =</span> <span class="ot">TRUE</span>, <span class="dt">facet =</span> mat_ses) <span class="op">+</span><span class="st"> </span><span class="kw">ggtitle</span>(<span class="st">&quot;% of missing values, by maternal social class&quot;</span>)</span></code></pre></div>
 <p><img src="/post/2019-04-27-maps-crowdsourcd-open-science-project-exploring-missing-values_files/figure-html/unnamed-chunk-13-1.png" width="672" /></p>
 <p>Which is echoed with paternal social standing as well:</p>
-<pre class="r"><code>orig_dat %&gt;% select(one_of(c(vars_model1, &quot;pat_ses&quot;))) %&gt;%
-  naniar::gg_miss_var(show_pct = TRUE, facet = pat_ses)+ ggtitle(&quot;% of missing values, by paternal social class&quot;)</code></pre>
+<div class="sourceCode" id="cb21"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1"></a>orig_dat <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">select</span>(<span class="kw">one_of</span>(<span class="kw">c</span>(vars_model1, <span class="st">&quot;pat_ses&quot;</span>))) <span class="op">%&gt;%</span></span>
+<span id="cb21-2"><a href="#cb21-2"></a><span class="st">  </span>naniar<span class="op">::</span><span class="kw">gg_miss_var</span>(<span class="dt">show_pct =</span> <span class="ot">TRUE</span>, <span class="dt">facet =</span> pat_ses)<span class="op">+</span><span class="st"> </span><span class="kw">ggtitle</span>(<span class="st">&quot;% of missing values, by paternal social class&quot;</span>)</span></code></pre></div>
 <p><img src="/post/2019-04-27-maps-crowdsourcd-open-science-project-exploring-missing-values_files/figure-html/unnamed-chunk-14-1.png" width="672" /></p>
 <p>This indicates that there are proportionately more respondents from class (i), which according to the data dictionary indicates “professional, e.g. occupation”, and fewer from classes (iii) “manual skilled occupation”, (iv) “partly skilled occupation” and (v) “unskilled occupation”. This brings up the question - what is the relationship between social class, screen-time, and depression?</p>
 </div>

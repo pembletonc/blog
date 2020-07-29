@@ -2,7 +2,6 @@
 title: "How to render parameterized pdfs in rmarkdown" 
 author: "Corey Pembleton"
 date: '2019-05-19'
-output: html_document
 slug: how-to-render-parameterized-pdfs-in-rmarkdown
 categories: ["R", "Tutorial"]
 tags: ["purrr", "tidyverse", "kableExtra", "pandoc", "knitr"]

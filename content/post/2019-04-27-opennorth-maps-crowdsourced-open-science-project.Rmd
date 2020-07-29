@@ -2,7 +2,6 @@
 title: "OpenNorth Team Launches Contribution to University of Bristol MAPS crowdsourced analysis"
 author: "Corey Pembleton"
 date: '2019-04-27'
-output: html_document
 slug: opennorth-maps-crowdsourced-open-science-project
 categories: [ "R", "dataexploration"]
 tags: ["data cleaning", "statistics", "crowdsourcing"]

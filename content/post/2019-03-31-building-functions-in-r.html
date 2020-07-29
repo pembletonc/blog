@@ -7,8 +7,75 @@ categories: ["R", "Tutorial"]
 tags: ["purrr"]
 thumbnailImagePosition: "left"
 thumbnailImage: "/img/purrr.png"
+output:
+  blogdown::html_page:
+    highlight: tango
 ---
 
+<style type="text/css">
+code.sourceCode > span { display: inline-block; line-height: 1.25; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode { white-space: pre; position: relative; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+code.sourceCode { white-space: pre-wrap; }
+code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  background-color: #f8f8f8; }
+@media screen {
+code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ef2929; } /* Alert */
+code span.an { color: #8f5902; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #c4a000; } /* Attribute */
+code span.bn { color: #0000cf; } /* BaseN */
+code span.cf { color: #204a87; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4e9a06; } /* Char */
+code span.cn { color: #000000; } /* Constant */
+code span.co { color: #8f5902; font-style: italic; } /* Comment */
+code span.cv { color: #8f5902; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #8f5902; font-weight: bold; font-style: italic; } /* Documentation */
+code span.dt { color: #204a87; } /* DataType */
+code span.dv { color: #0000cf; } /* DecVal */
+code span.er { color: #a40000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #0000cf; } /* Float */
+code span.fu { color: #000000; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #204a87; font-weight: bold; } /* Keyword */
+code span.op { color: #ce5c00; font-weight: bold; } /* Operator */
+code span.ot { color: #8f5902; } /* Other */
+code span.pp { color: #8f5902; font-style: italic; } /* Preprocessor */
+code span.sc { color: #000000; } /* SpecialChar */
+code span.ss { color: #4e9a06; } /* SpecialString */
+code span.st { color: #4e9a06; } /* String */
+code span.va { color: #000000; } /* Variable */
+code span.vs { color: #4e9a06; } /* VerbatimString */
+code span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
+</style>
 
 
 <p>This post covers the fundamental functions and approaches in Charlotte and Hadley Wickham’s <em>Writing functions in R</em> <a href="https://www.datacamp.com/courses/writing-functions-in-r">datacamp course</a>.</p>
@@ -27,22 +94,22 @@ thumbnailImage: "/img/purrr.png"
 <div id="function-names-argument-names-argument-order" class="section level3">
 <h3>function names, argument names, argument order</h3>
 <p>All of these matter! Give a function a descriptive name, have name arguments (e.g. what goes into the function’s ()) in a way which makes sense, and ensure the argument order is logical. Argument order should be with data arguments first, and detail arguments second:</p>
-<pre class="r"><code>mean_ci &lt;- function(x, level = 0.95) { #x = data, level = detail
-  se &lt;- sd(x) / sqrt(length(x))
-  alpha &lt;- 1 - level
-  mean(x) + se * qnorm(c(alpha / 2, 1 - alpha / 2))
-}</code></pre>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a>mean_ci &lt;-<span class="st"> </span><span class="cf">function</span>(x, <span class="dt">level =</span> <span class="fl">0.95</span>) { <span class="co">#x = data, level = detail</span></span>
+<span id="cb1-2"><a href="#cb1-2"></a>  se &lt;-<span class="st"> </span><span class="kw">sd</span>(x) <span class="op">/</span><span class="st"> </span><span class="kw">sqrt</span>(<span class="kw">length</span>(x))</span>
+<span id="cb1-3"><a href="#cb1-3"></a>  alpha &lt;-<span class="st"> </span><span class="dv">1</span> <span class="op">-</span><span class="st"> </span>level</span>
+<span id="cb1-4"><a href="#cb1-4"></a>  <span class="kw">mean</span>(x) <span class="op">+</span><span class="st"> </span>se <span class="op">*</span><span class="st"> </span><span class="kw">qnorm</span>(<span class="kw">c</span>(alpha <span class="op">/</span><span class="st"> </span><span class="dv">2</span>, <span class="dv">1</span> <span class="op">-</span><span class="st"> </span>alpha <span class="op">/</span><span class="st"> </span><span class="dv">2</span>))</span>
+<span id="cb1-5"><a href="#cb1-5"></a>}</span></code></pre></div>
 <p>Another best practice is adding return statements to functions to give messages such as warnings or errors to users of the function:</p>
-<pre class="r"><code>mean_ci &lt;- function(x, level = 0.95) {
-  if (length(x) == 0) {
-  warning(&quot;`x` was empty&quot;, call. = FALSE)
-  return(c(-Inf, Inf))
-    
-  } else {
-  se &lt;- sd(x) / sqrt(length(x))
-  alpha &lt;- 1 - level
-  mean(x) + se * qnorm(c(alpha / 2, 1 - alpha / 2))
-  }</code></pre>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a>mean_ci &lt;-<span class="st"> </span><span class="cf">function</span>(x, <span class="dt">level =</span> <span class="fl">0.95</span>) {</span>
+<span id="cb2-2"><a href="#cb2-2"></a>  <span class="cf">if</span> (<span class="kw">length</span>(x) <span class="op">==</span><span class="st"> </span><span class="dv">0</span>) {</span>
+<span id="cb2-3"><a href="#cb2-3"></a>  <span class="kw">warning</span>(<span class="st">&quot;`x` was empty&quot;</span>, <span class="dt">call. =</span> <span class="ot">FALSE</span>)</span>
+<span id="cb2-4"><a href="#cb2-4"></a>  <span class="kw">return</span>(<span class="kw">c</span>(<span class="op">-</span><span class="ot">Inf</span>, <span class="ot">Inf</span>))</span>
+<span id="cb2-5"><a href="#cb2-5"></a>    </span>
+<span id="cb2-6"><a href="#cb2-6"></a>  } <span class="cf">else</span> {</span>
+<span id="cb2-7"><a href="#cb2-7"></a>  se &lt;-<span class="st"> </span><span class="kw">sd</span>(x) <span class="op">/</span><span class="st"> </span><span class="kw">sqrt</span>(<span class="kw">length</span>(x))</span>
+<span id="cb2-8"><a href="#cb2-8"></a>  alpha &lt;-<span class="st"> </span><span class="dv">1</span> <span class="op">-</span><span class="st"> </span>level</span>
+<span id="cb2-9"><a href="#cb2-9"></a>  <span class="kw">mean</span>(x) <span class="op">+</span><span class="st"> </span>se <span class="op">*</span><span class="st"> </span><span class="kw">qnorm</span>(<span class="kw">c</span>(alpha <span class="op">/</span><span class="st"> </span><span class="dv">2</span>, <span class="dv">1</span> <span class="op">-</span><span class="st"> </span>alpha <span class="op">/</span><span class="st"> </span><span class="dv">2</span>))</span>
+<span id="cb2-10"><a href="#cb2-10"></a>  }</span></code></pre></div>
 <div id="newish-functions-learned-in-this-course-section" class="section level4">
 <h4>new(ish) functions learned in this course section:</h4>
 <ul>
@@ -59,53 +126,53 @@ thumbnailImage: "/img/purrr.png"
 <h2>Functional programming with purrr</h2>
 <p>Why learn to write functions programmatically? Because in many cases (and pretty much every case I’ve seen professionally) functions often need to be flexible enough to take multiple arguments to achieve a desired result, and often needs to perform multiple tasks sequentially to give a single desired output.</p>
 <p>Functional programming is first introduced by showing how to create a function which takes another function as an argument. So instead of repeating the same process with a single-function usage:</p>
-<pre class="r"><code>col_median &lt;- function(df) {
-  output &lt;- numeric(length(df))
-  for (i in seq_along(df)) {
-    output[[i]] &lt;- median(df[[i]]) 
-  }
-  output
-}
-
-#new function with only difference being median() is replaced with mean()
-col_mean &lt;- function(df) {
-  output &lt;- numeric(length(df))
-  for (i in seq_along(df)) {
-    output[[i]] &lt;- mean(df[[i]])
-  }
-  output
-}</code></pre>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1"></a>col_median &lt;-<span class="st"> </span><span class="cf">function</span>(df) {</span>
+<span id="cb3-2"><a href="#cb3-2"></a>  output &lt;-<span class="st"> </span><span class="kw">numeric</span>(<span class="kw">length</span>(df))</span>
+<span id="cb3-3"><a href="#cb3-3"></a>  <span class="cf">for</span> (i <span class="cf">in</span> <span class="kw">seq_along</span>(df)) {</span>
+<span id="cb3-4"><a href="#cb3-4"></a>    output[[i]] &lt;-<span class="st"> </span><span class="kw">median</span>(df[[i]]) </span>
+<span id="cb3-5"><a href="#cb3-5"></a>  }</span>
+<span id="cb3-6"><a href="#cb3-6"></a>  output</span>
+<span id="cb3-7"><a href="#cb3-7"></a>}</span>
+<span id="cb3-8"><a href="#cb3-8"></a></span>
+<span id="cb3-9"><a href="#cb3-9"></a><span class="co">#new function with only difference being median() is replaced with mean()</span></span>
+<span id="cb3-10"><a href="#cb3-10"></a>col_mean &lt;-<span class="st"> </span><span class="cf">function</span>(df) {</span>
+<span id="cb3-11"><a href="#cb3-11"></a>  output &lt;-<span class="st"> </span><span class="kw">numeric</span>(<span class="kw">length</span>(df))</span>
+<span id="cb3-12"><a href="#cb3-12"></a>  <span class="cf">for</span> (i <span class="cf">in</span> <span class="kw">seq_along</span>(df)) {</span>
+<span id="cb3-13"><a href="#cb3-13"></a>    output[[i]] &lt;-<span class="st"> </span><span class="kw">mean</span>(df[[i]])</span>
+<span id="cb3-14"><a href="#cb3-14"></a>  }</span>
+<span id="cb3-15"><a href="#cb3-15"></a>  output</span>
+<span id="cb3-16"><a href="#cb3-16"></a>}</span></code></pre></div>
 <p>The <code>col_summary()</code> function below can take a function as an argument instead - think <code>sapply()</code> or <code>lapply()</code>.</p>
-<pre class="r"><code>col_summary &lt;- function(df, fun) { #fun can be median or mean
-  output &lt;- numeric(ncol(df))
-  for (i in seq_along(df)) {
-    output[[i]] &lt;- fun(df[[i]])
-  }
-  output
-}</code></pre>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1"></a>col_summary &lt;-<span class="st"> </span><span class="cf">function</span>(df, fun) { <span class="co">#fun can be median or mean</span></span>
+<span id="cb4-2"><a href="#cb4-2"></a>  output &lt;-<span class="st"> </span><span class="kw">numeric</span>(<span class="kw">ncol</span>(df))</span>
+<span id="cb4-3"><a href="#cb4-3"></a>  <span class="cf">for</span> (i <span class="cf">in</span> <span class="kw">seq_along</span>(df)) {</span>
+<span id="cb4-4"><a href="#cb4-4"></a>    output[[i]] &lt;-<span class="st"> </span><span class="kw">fun</span>(df[[i]])</span>
+<span id="cb4-5"><a href="#cb4-5"></a>  }</span>
+<span id="cb4-6"><a href="#cb4-6"></a>  output</span>
+<span id="cb4-7"><a href="#cb4-7"></a>}</span></code></pre></div>
 <div id="functional-programming-with-purrr-1" class="section level3">
 <h3>functional programming with purrr</h3>
 <p>What’s a better step than writing a function which takes a function as an argument? The <code>map_()</code> family of functions in the purrr package.</p>
 <p>The map functions in purrr work by “first taking a vector, <code>.x</code>, as the first argument, then return <code>.f</code> applied to each element of <code>.x</code>”. Map functions take additional arugments of <code>.f</code> with <code>...</code>.</p>
 <p>There are some interesting ways of how <code>.f</code> can be specified within a mapping function:</p>
 <p>By defining an anonymous function within the <code>map()</code>:</p>
-<pre class="r"><code>map(df, function(x) sum(is.na(x)))</code></pre>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1"></a><span class="kw">map</span>(df, <span class="cf">function</span>(x) <span class="kw">sum</span>(<span class="kw">is.na</span>(x)))</span></code></pre></div>
 <p>Or, smoother yet, defining an anonymous function as a formula with the <code>~</code>:</p>
-<pre class="r"><code>map(df, ~ sum(is.na(.)))</code></pre>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1"></a><span class="kw">map</span>(df, <span class="op">~</span><span class="st"> </span><span class="kw">sum</span>(<span class="kw">is.na</span>(.)))</span></code></pre></div>
 <p>This is very useful, and I’ve used this approach in multiple occasions, especially in nested dataframes, or as this example shows, across a split dataframe:</p>
-<pre class="r"><code>#where cyl is mtcars split() by a grouping variable (cyl)
-
-map(cyl, function(df) lm(mpg ~ wt, data = df))
-
-#which is the same as:
-
-map(cyl, ~ lm(mpg ~ wt, data = .))</code></pre>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1"></a><span class="co">#where cyl is mtcars split() by a grouping variable (cyl)</span></span>
+<span id="cb7-2"><a href="#cb7-2"></a></span>
+<span id="cb7-3"><a href="#cb7-3"></a><span class="kw">map</span>(cyl, <span class="cf">function</span>(df) <span class="kw">lm</span>(mpg <span class="op">~</span><span class="st"> </span>wt, <span class="dt">data =</span> df))</span>
+<span id="cb7-4"><a href="#cb7-4"></a></span>
+<span id="cb7-5"><a href="#cb7-5"></a><span class="co">#which is the same as:</span></span>
+<span id="cb7-6"><a href="#cb7-6"></a></span>
+<span id="cb7-7"><a href="#cb7-7"></a><span class="kw">map</span>(cyl, <span class="op">~</span><span class="st"> </span><span class="kw">lm</span>(mpg <span class="op">~</span><span class="st"> </span>wt, <span class="dt">data =</span> .))</span></code></pre></div>
 <p>From the top, and extracting one of the variables using a combination of <code>summary()</code> and `<code>map_dbl()</code>:</p>
-<pre class="r"><code>mtcars %&gt;% 
-  split(mtcars$cyl) %&gt;%
-  map(~ lm(mpg ~ wt, data = .)) %&gt;% 
-  map(summary) %&gt;%
-  map_dbl(&quot;r.squared&quot;)</code></pre>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1"></a>mtcars <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb8-2"><a href="#cb8-2"></a><span class="st">  </span><span class="kw">split</span>(mtcars<span class="op">$</span>cyl) <span class="op">%&gt;%</span></span>
+<span id="cb8-3"><a href="#cb8-3"></a><span class="st">  </span><span class="kw">map</span>(<span class="op">~</span><span class="st"> </span><span class="kw">lm</span>(mpg <span class="op">~</span><span class="st"> </span>wt, <span class="dt">data =</span> .)) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb8-4"><a href="#cb8-4"></a><span class="st">  </span><span class="kw">map</span>(summary) <span class="op">%&gt;%</span></span>
+<span id="cb8-5"><a href="#cb8-5"></a><span class="st">  </span><span class="kw">map_dbl</span>(<span class="st">&quot;r.squared&quot;</span>)</span></code></pre></div>
 </div>
 </div>
 <div id="advanced-inputs-and-outputs" class="section level2">
@@ -114,83 +181,83 @@ map(cyl, ~ lm(mpg ~ wt, data = .))</code></pre>
 <div id="safety-first" class="section level4">
 <h4>Safety first</h4>
 <p>It isn’t very glamorous, but what is suggested is creating “safe” functions with <code>purrr::safely()</code>, and extracting the successful instance. For instance, in the following list there is one url that will cause the <code>map()</code> output to fail ( due to asdf not being a url), even for the other two successful strings:</p>
-<pre class="r"><code>urls &lt;- list(&quot;example&quot; = &quot;http://example.org&quot;, &quot;rproj&quot; = &quot;http://www.r-project.org&quot;,
-             &quot;asdf&quot; = &quot;http://asdfasdasdkfjlda&quot;)
-
-purrr::map(urls, readLines)
-
-#Warning message: URL &#39;http://asdfasdasdkfjlda/&#39;: status was &#39;Couldn&#39;t resolve host name&#39;
-#Error: cannot open the connection to &#39;http://asdfasdasdkfjlda&#39;</code></pre>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1"></a>urls &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="st">&quot;example&quot;</span> =<span class="st"> &quot;http://example.org&quot;</span>, <span class="st">&quot;rproj&quot;</span> =<span class="st"> &quot;http://www.r-project.org&quot;</span>,</span>
+<span id="cb9-2"><a href="#cb9-2"></a>             <span class="st">&quot;asdf&quot;</span> =<span class="st"> &quot;http://asdfasdasdkfjlda&quot;</span>)</span>
+<span id="cb9-3"><a href="#cb9-3"></a></span>
+<span id="cb9-4"><a href="#cb9-4"></a>purrr<span class="op">::</span><span class="kw">map</span>(urls, readLines)</span>
+<span id="cb9-5"><a href="#cb9-5"></a></span>
+<span id="cb9-6"><a href="#cb9-6"></a><span class="co">#Warning message: URL &#39;http://asdfasdasdkfjlda/&#39;: status was &#39;Couldn&#39;t resolve host name&#39;</span></span>
+<span id="cb9-7"><a href="#cb9-7"></a><span class="co">#Error: cannot open the connection to &#39;http://asdfasdasdkfjlda&#39;</span></span></code></pre></div>
 <p>Whereas by using <code>purrr::safely()</code>, I can extract the successful cases:</p>
-<pre class="r"><code>safe_readLines &lt;- safely(readLines)
-
-html &lt;- map(urls, safe_readLines)
-res &lt;- transpose(html)[[&quot;result&quot;]]
-errs &lt;- transpose(html)[[&quot;error&quot;]]
-
-# Create a logical vector is_ok
-
-is_ok &lt;- map_lgl(errs, is_null)
-
-# Extract the successful results
-
-res[is_ok]</code></pre>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1"></a>safe_readLines &lt;-<span class="st"> </span><span class="kw">safely</span>(readLines)</span>
+<span id="cb10-2"><a href="#cb10-2"></a></span>
+<span id="cb10-3"><a href="#cb10-3"></a>html &lt;-<span class="st"> </span><span class="kw">map</span>(urls, safe_readLines)</span>
+<span id="cb10-4"><a href="#cb10-4"></a>res &lt;-<span class="st"> </span><span class="kw">transpose</span>(html)[[<span class="st">&quot;result&quot;</span>]]</span>
+<span id="cb10-5"><a href="#cb10-5"></a>errs &lt;-<span class="st"> </span><span class="kw">transpose</span>(html)[[<span class="st">&quot;error&quot;</span>]]</span>
+<span id="cb10-6"><a href="#cb10-6"></a></span>
+<span id="cb10-7"><a href="#cb10-7"></a><span class="co"># Create a logical vector is_ok</span></span>
+<span id="cb10-8"><a href="#cb10-8"></a></span>
+<span id="cb10-9"><a href="#cb10-9"></a>is_ok &lt;-<span class="st"> </span><span class="kw">map_lgl</span>(errs, is_null)</span>
+<span id="cb10-10"><a href="#cb10-10"></a></span>
+<span id="cb10-11"><a href="#cb10-11"></a><span class="co"># Extract the successful results</span></span>
+<span id="cb10-12"><a href="#cb10-12"></a></span>
+<span id="cb10-13"><a href="#cb10-13"></a>res[is_ok]</span></code></pre></div>
 </div>
 <div id="functional-programming-with-multiple-arguments" class="section level4">
 <h4>Functional programming with multiple arguments</h4>
 <p>To run <code>x</code> function across <code>y</code> vector, <code>map()</code> can be used here just like <code>lapply()</code>:</p>
-<pre class="r"><code>n &lt;- list(5, 10, 20)
-
-map(n, rnorm)
-
-#[[1]]
-#[1]  0.4907515 -0.4560749  1.2945899 -1.0598452  1.0723190
-#
-#[[2]]
-# [1]  2.34129640 -0.56043998  1.08288931  1.55218967  0.91355529  0.53500625
-# [7]  1.18360627  0.05123708  0.30351433  0.06820386
-#
-#[[3]]
-# [1]  0.02583432 -1.06354413  0.32748503  0.51576915 -0.34135875 -0.42845792
-# [7]  1.44046599 -0.89893656  0.25438159  1.52441570  1.22505382  1.01317309
-#[13]  0.15274974 -0.73192319 -0.60792292 -1.67418024  1.92924421  1.31669983
-#[19]  0.29092385 -1.39645626</code></pre>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1"></a>n &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dv">5</span>, <span class="dv">10</span>, <span class="dv">20</span>)</span>
+<span id="cb11-2"><a href="#cb11-2"></a></span>
+<span id="cb11-3"><a href="#cb11-3"></a><span class="kw">map</span>(n, rnorm)</span>
+<span id="cb11-4"><a href="#cb11-4"></a></span>
+<span id="cb11-5"><a href="#cb11-5"></a><span class="co">#[[1]]</span></span>
+<span id="cb11-6"><a href="#cb11-6"></a><span class="co">#[1]  0.4907515 -0.4560749  1.2945899 -1.0598452  1.0723190</span></span>
+<span id="cb11-7"><a href="#cb11-7"></a><span class="co">#</span></span>
+<span id="cb11-8"><a href="#cb11-8"></a><span class="co">#[[2]]</span></span>
+<span id="cb11-9"><a href="#cb11-9"></a><span class="co"># [1]  2.34129640 -0.56043998  1.08288931  1.55218967  0.91355529  0.53500625</span></span>
+<span id="cb11-10"><a href="#cb11-10"></a><span class="co"># [7]  1.18360627  0.05123708  0.30351433  0.06820386</span></span>
+<span id="cb11-11"><a href="#cb11-11"></a><span class="co">#</span></span>
+<span id="cb11-12"><a href="#cb11-12"></a><span class="co">#[[3]]</span></span>
+<span id="cb11-13"><a href="#cb11-13"></a><span class="co"># [1]  0.02583432 -1.06354413  0.32748503  0.51576915 -0.34135875 -0.42845792</span></span>
+<span id="cb11-14"><a href="#cb11-14"></a><span class="co"># [7]  1.44046599 -0.89893656  0.25438159  1.52441570  1.22505382  1.01317309</span></span>
+<span id="cb11-15"><a href="#cb11-15"></a><span class="co">#[13]  0.15274974 -0.73192319 -0.60792292 -1.67418024  1.92924421  1.31669983</span></span>
+<span id="cb11-16"><a href="#cb11-16"></a><span class="co">#[19]  0.29092385 -1.39645626</span></span></code></pre></div>
 <p>And to specify one or more of the arguments which can be input to <code>rnorm()</code> such as mean or sd, we could do so by specifying these arguments in a list using <code>map2()</code>; following the order of the arguments of the function:</p>
-<pre class="r"><code>n &lt;- list(5, 10, 20)
-
-mu &lt;- list(1, 5, 10)
-
-map2(n, mu, rnorm)</code></pre>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1"></a>n &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dv">5</span>, <span class="dv">10</span>, <span class="dv">20</span>)</span>
+<span id="cb12-2"><a href="#cb12-2"></a></span>
+<span id="cb12-3"><a href="#cb12-3"></a>mu &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dv">1</span>, <span class="dv">5</span>, <span class="dv">10</span>)</span>
+<span id="cb12-4"><a href="#cb12-4"></a></span>
+<span id="cb12-5"><a href="#cb12-5"></a><span class="kw">map2</span>(n, mu, rnorm)</span></code></pre></div>
 <p>Functions with two arguments or more can use <code>pmap()</code> by listing the arguments as the first argument in <code>pmap()</code>. Note that it is best practice to have the argument names within the list match those of the function:</p>
-<pre class="r"><code>n &lt;- list(5, 10, 20)
-mean &lt;- list(1, 5, 10)
-sd &lt;- list(0.1, 1, 0.1)
-
-pmap(list(mean = mean, n =  n, sd = sd), rnorm)</code></pre>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1"></a>n &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dv">5</span>, <span class="dv">10</span>, <span class="dv">20</span>)</span>
+<span id="cb13-2"><a href="#cb13-2"></a>mean &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dv">1</span>, <span class="dv">5</span>, <span class="dv">10</span>)</span>
+<span id="cb13-3"><a href="#cb13-3"></a>sd &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="fl">0.1</span>, <span class="dv">1</span>, <span class="fl">0.1</span>)</span>
+<span id="cb13-4"><a href="#cb13-4"></a></span>
+<span id="cb13-5"><a href="#cb13-5"></a><span class="kw">pmap</span>(<span class="kw">list</span>(<span class="dt">mean =</span> mean, <span class="dt">n =</span>  n, <span class="dt">sd =</span> sd), rnorm)</span></code></pre></div>
 <p>And another cool function, which I haven’t quite figured out how I would use in a practical setting is <code>invoke_map()</code>, used to run multiple functions and their params at once:</p>
-<pre class="r"><code>funs &lt;- list(&quot;rnorm&quot;, &quot;runif&quot;, &quot;rexp&quot;)
-rnorm_params &lt;- list(mean = 10)
-runif_params &lt;- list(min = 0, max = 5)
-rexp_params &lt;- list(rate=5)
-
-params &lt;- list(
-  rnorm_params,
-  runif_params,
-  rexp_params
-)
-
-invoke_map(funs, params, n = 5)</code></pre>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1"></a>funs &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="st">&quot;rnorm&quot;</span>, <span class="st">&quot;runif&quot;</span>, <span class="st">&quot;rexp&quot;</span>)</span>
+<span id="cb14-2"><a href="#cb14-2"></a>rnorm_params &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">mean =</span> <span class="dv">10</span>)</span>
+<span id="cb14-3"><a href="#cb14-3"></a>runif_params &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">min =</span> <span class="dv">0</span>, <span class="dt">max =</span> <span class="dv">5</span>)</span>
+<span id="cb14-4"><a href="#cb14-4"></a>rexp_params &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">rate=</span><span class="dv">5</span>)</span>
+<span id="cb14-5"><a href="#cb14-5"></a></span>
+<span id="cb14-6"><a href="#cb14-6"></a>params &lt;-<span class="st"> </span><span class="kw">list</span>(</span>
+<span id="cb14-7"><a href="#cb14-7"></a>  rnorm_params,</span>
+<span id="cb14-8"><a href="#cb14-8"></a>  runif_params,</span>
+<span id="cb14-9"><a href="#cb14-9"></a>  rexp_params</span>
+<span id="cb14-10"><a href="#cb14-10"></a>)</span>
+<span id="cb14-11"><a href="#cb14-11"></a></span>
+<span id="cb14-12"><a href="#cb14-12"></a><span class="kw">invoke_map</span>(funs, params, <span class="dt">n =</span> <span class="dv">5</span>)</span></code></pre></div>
 </div>
 <div id="walk-functions" class="section level3">
 <h3>Walk functions</h3>
 <p>The walk family of functions in purrr are designed as map functions for extracting the side-effects of functions such as printing outputs, plotting, and saving files to disk. In the very useful example provided, map + walk2 allows me to create plots for each grouped variable and apply unique path names to each:</p>
-<pre class="r"><code>plots &lt;- mtcars %&gt;% 
-  split(mtcars$cyl) %&gt;% 
-  map(~ ggplot(., aes(mpg, wt)) + geom_point())
-
-paths &lt;- paste0(names(plots), &quot;.pdf&quot;)
-
-walk2(paths, plots, ggsave)</code></pre>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1"></a>plots &lt;-<span class="st"> </span>mtcars <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb15-2"><a href="#cb15-2"></a><span class="st">  </span><span class="kw">split</span>(mtcars<span class="op">$</span>cyl) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb15-3"><a href="#cb15-3"></a><span class="st">  </span><span class="kw">map</span>(<span class="op">~</span><span class="st"> </span><span class="kw">ggplot</span>(., <span class="kw">aes</span>(mpg, wt)) <span class="op">+</span><span class="st"> </span><span class="kw">geom_point</span>())</span>
+<span id="cb15-4"><a href="#cb15-4"></a></span>
+<span id="cb15-5"><a href="#cb15-5"></a>paths &lt;-<span class="st"> </span><span class="kw">paste0</span>(<span class="kw">names</span>(plots), <span class="st">&quot;.pdf&quot;</span>)</span>
+<span id="cb15-6"><a href="#cb15-6"></a></span>
+<span id="cb15-7"><a href="#cb15-7"></a><span class="kw">walk2</span>(paths, plots, ggsave)</span></code></pre></div>
 <p>This is massively helpful - I’ll be revisiting old approaches where I try to use map2 to extract side effects and replace it with walk / walk2.</p>
 <div id="newish-functions-learned-in-this-course-section-1" class="section level4">
 <h4>new(ish) functions learned in this course section:</h4>
@@ -234,26 +301,26 @@ walk2(paths, plots, ggsave)</code></pre>
 </ul>
 <div id="adding-meaningful-errors-into-functions" class="section level3">
 <h3>Adding meaningful errors into functions</h3>
-<pre class="r"><code>x &lt;- c(NA, NA, NA)
-y &lt;- c( 1, NA, NA, NA)
-
-both_na &lt;- function(x, y) {
-  # Replace condition with logical
-  if (length(x) != length(y)) {
-    stop(&quot;x and y must have the same length&quot;, call. = FALSE)
-  }  
-  
-  sum(is.na(x) &amp; is.na(y))
-}
-
-both_na(x,y)</code></pre>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1"></a>x &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="ot">NA</span>, <span class="ot">NA</span>, <span class="ot">NA</span>)</span>
+<span id="cb16-2"><a href="#cb16-2"></a>y &lt;-<span class="st"> </span><span class="kw">c</span>( <span class="dv">1</span>, <span class="ot">NA</span>, <span class="ot">NA</span>, <span class="ot">NA</span>)</span>
+<span id="cb16-3"><a href="#cb16-3"></a></span>
+<span id="cb16-4"><a href="#cb16-4"></a>both_na &lt;-<span class="st"> </span><span class="cf">function</span>(x, y) {</span>
+<span id="cb16-5"><a href="#cb16-5"></a>  <span class="co"># Replace condition with logical</span></span>
+<span id="cb16-6"><a href="#cb16-6"></a>  <span class="cf">if</span> (<span class="kw">length</span>(x) <span class="op">!=</span><span class="st"> </span><span class="kw">length</span>(y)) {</span>
+<span id="cb16-7"><a href="#cb16-7"></a>    <span class="kw">stop</span>(<span class="st">&quot;x and y must have the same length&quot;</span>, <span class="dt">call. =</span> <span class="ot">FALSE</span>)</span>
+<span id="cb16-8"><a href="#cb16-8"></a>  }  </span>
+<span id="cb16-9"><a href="#cb16-9"></a>  </span>
+<span id="cb16-10"><a href="#cb16-10"></a>  <span class="kw">sum</span>(<span class="kw">is.na</span>(x) <span class="op">&amp;</span><span class="st"> </span><span class="kw">is.na</span>(y))</span>
+<span id="cb16-11"><a href="#cb16-11"></a>}</span>
+<span id="cb16-12"><a href="#cb16-12"></a></span>
+<span id="cb16-13"><a href="#cb16-13"></a><span class="kw">both_na</span>(x,y)</span></code></pre></div>
 </div>
 <div id="non-standard-evaluation" class="section level3">
 <h3>Non-Standard Evaluation</h3>
 <p>The tidyverse of packages uses a different set of lookup rules within a function’s argument than base R as a means of increasing efficiency in programming. The difference is that functions can call upon variables within the data directly without needing to prefix with a <code>dat$</code> call. Think <code>ggplot</code> or <code>dplyr::filter</code>:</p>
-<pre class="r"><code>ggplot(mpg, aes(displ, cty)) + geom_point() #displ and cty direct variable lookup
-
-filter(mtcars, disp &gt; 400)</code></pre>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1"></a><span class="kw">ggplot</span>(mpg, <span class="kw">aes</span>(displ, cty)) <span class="op">+</span><span class="st"> </span><span class="kw">geom_point</span>() <span class="co">#displ and cty direct variable lookup</span></span>
+<span id="cb17-2"><a href="#cb17-2"></a></span>
+<span id="cb17-3"><a href="#cb17-3"></a><span class="kw">filter</span>(mtcars, disp <span class="op">&gt;</span><span class="st"> </span><span class="dv">400</span>)</span></code></pre></div>
 <p>This is a beauty of the tidyverse, however it can bring on some challenges if there are values with the same name as the inputs of the function in the global environment, or if there are names which are the same in the dataframe input. The solutions suggested in the course is to write a warning in the function to prevent that those don’t already exist prior to the function executing - simple enough.</p>
 </div>
 </div>
