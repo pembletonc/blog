@@ -24,7 +24,7 @@ thumbnailImage: "/img/messydata.png"
 <p>SurveyMonkey results are exported with two or more header rows. The first row is descriptive, for “parent” main questions, the second for the “child” subquestions, the data required is stored in the latter.</p>
 <p>In addition to Questions, the first 1-10 columns contain descriptive information on the respondent, and other descriptive elements. These descriptive aspects are stored in the first row (along with the parent questions), which <code>read_excel()</code> correctly sets as the header.</p>
 <div class="figure">
-<img src="/img/messy_survey.png" alt="Getting the import right is half the battle" />
+<img src="/img/messy_survey.png" alt="" />
 <p class="caption">Getting the import right is half the battle</p>
 </div>
 <p>Because of this structure, <code>name()</code> can’t be set on import, and some manipulation is required. This method, which I’ve taken from <a href="%22https://debruine.github.io/multirow_headers.html%22">Lisa DeBruine</a>, is helpful in that columns don’t have to be manually identified, and is reusable for any survey.</p>
@@ -33,8 +33,10 @@ thumbnailImage: "/img/messydata.png"
   as_tibble() %&gt;% 
   mutate(name = paste(V1, sep = &quot;_&quot;)) %&gt;% 
   pull(name)</code></pre>
-<pre><code>## Warning: `as_tibble.matrix()` requires a matrix with column names or a `.name_repair` argument. Using compatibility `.name_repair`.
-## This warning is displayed once per session.</code></pre>
+<pre><code>## Warning: The `x` argument of `as_tibble.matrix()` must have column names if `.name_repair` is omitted as of tibble 2.0.0.
+## Using compatibility `.name_repair`.
+## This warning is displayed once every 8 hours.
+## Call `lifecycle::last_warnings()` to see where this warning was generated.</code></pre>
 <pre class="r"><code>new_names[1:4] &lt;- c(&quot;stakeholder_group&quot;, &quot;gender&quot;, &quot;position&quot;, &quot;sector&quot;)</code></pre>
 <p>Which can now be applied to the survey data, and the first row dropped.</p>
 <pre class="r"><code>names(survey) &lt;- new_names
@@ -262,6 +264,8 @@ Proportions_Function &lt;- function(tbl){
 stakeholder_proportions &lt;- survey_counts %&gt;% 
   Proportions_Function() %&gt;% 
   arrange(Question)</code></pre>
+<pre><code>## `mutate_if()` ignored the following grouping variables:
+## Column `stakeholder_group`</code></pre>
 <p>And with that, we now have two tables, one for stakeholder response proportions, and another for stakeholder responses by counts. In my experience, this workflow can bring on massive time savings, is fairly replicable across survey projects, and lends very well to excel table or graphic exports with anonymized findings for clients.</p>
 <p>To find out how to export these as tabbed or single-page excel documents, check out <a href="http://coreypembleton.netlify.com/r-can-do-that/open-xlsx-create-excel-workbooks/">my other post on that topic</a>, and to learn how to quickly produce graphics for those proportion tables, be sure to check <a href="http://coreypembleton.netlify.com/dev-eval/nesting-mapping-plotting-survey-results/">this</a> <code>purrr::map2()</code> workflow.</p>
 </div>

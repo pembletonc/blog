@@ -1,0 +1,93 @@
+---
+title: Catching up with dplyr 1.0 with fivethirtyeight data
+author: Corey Pembleton
+date: '2020-07-26'
+slug: catching-up-with-dplyr-1-0
+categories: ["R"]
+tags: ["dplyr", "data cleaning"]
+output:
+  blogdown::html_page:
+    highlight: tango
+---
+
+
+Using the latest (July 27th 2020) COVID-19 polling [data](https://github.com/fivethirtyeight/covid-19-polls.git) made available by fivethirtyeight, I'd like to explore some of the updates to dplyr to refresh myself on some of the changes made as I've been away from programming for...at least 6 months.
+
+```{r, include=FALSE, message=FALSE, warning=FALSE}
+library(tidyverse, warn.conflicts = FALSE)
+library(kableExtra)
+
+```
+
+
+They have several .csv files, I'll just pull one of them out:
+```{r, echo=FALSE}
+
+tribble(~"name", ~"description", 
+        "covid_approval_polls.csv", " contains polls that ask Americans whether or not they approve of the way Trump is handling covid-19.",
+        "covid_concern_polls.csv", "contain the polls ask Ameicans how concerned they feel about aspects of the outbreak such as infection and economic impact.",
+        "covid_approval_polls_adjusted.csv and covid_concern_polls_adjusted.csv", "contain the polls after adjustments are applied by our poll-averaging algorithm.",
+        "covid_approval_toplines.csv and covid_concern_toplines.csv", "contain the calculated daily averages for the approval and concern polls respectively."
+        ) %>% 
+  kableExtra::kable() %>% 
+  kable_styling()
+  
+```
+
+
+```{r, echo=FALSE, message=FALSE,}
+econ <- readr::read_csv("/Users/corey/Projects/R/blog/covid-19-polls/covid_concern_polls.csv") %>% filter(subject == "concern-economy")
+
+```
+
+
+```{r}
+
+#devtools::install_github("ropensci/skimr", ref = "develop")
+skimr::skim(econ)
+
+```
+
+Checking the data with the new ```summarise()``` functionality which allows for multiple value outputs:
+```{r}
+econ %>% 
+  group_by(sponsor) %>% 
+  summarise(sd = sd(sample_size), mean = mean(sample_size)) %>% 
+  head(10) %>% 
+  kableExtra::kable() %>% 
+  kable_styling()
+```
+
+Another new feature is the ```rowwise()``` function, which I believe will come very handy in the future cleaning survey data for export to excel where colleagues enjoy having row names.
+
+Here I can create a grouped row-wise set of columns which can be useful for a dataset like this where I need to perform operations across columns:
+
+```{r}
+econ %>% 
+  filter(start_date >= "2020-06-01") %>% 
+  rowwise(pollster) %>% 
+  summarise(sum = sum(c_across(very:not_at_all))) %>% 
+  head(10) %>% 
+  kableExtra::kable() %>% 
+  kable_styling()
+```
+
+Also interesting is the introduction of ```c_across()``` for easier grabbing columns, and ```across()``` which applies a function or set of functions to a set of columns, like mutate_if but more intuitive, and nice because you can use other ```tidyverse``` select verbs with it.
+
+```{r}
+econ %>% 
+  filter(start_date >= "2020-06-01") %>% 
+  rowwise(pollster) %>% 
+  mutate(sum = sum(c_across(very:not_at_all))) %>%
+  ungroup() %>% 
+  mutate(across(very:not_at_all, ~. / sum )) %>% 
+  head(10) %>% 
+  select(pollster, very:not_at_all, sum) %>% 
+  kableExtra::kable() %>% 
+  kable_styling()
+```
+
+This is a much neater syntax then before, very nice `r emo::ji(keyword = "+1")`. There's much more to learn on it, and as I dive back into R will be noting here how I use the new dplyr verbs and nouns.
+
+
+
