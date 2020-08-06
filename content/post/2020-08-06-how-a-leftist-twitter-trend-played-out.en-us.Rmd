@@ -1,0 +1,83 @@
+---
+title: How a leftist twitter trend played out
+author: 'Corey Pembleton'
+date: '2020-08-06'
+slug: how-a-leftist-twitter-trend-played-out.en-us
+categories: ["R", "webscraping"]
+tags: ["R", "rtweet", "twitter"]
+keywords: ["r", "twitter-analysis", "r-stats"]
+---
+
+
+A twitter trend took over on August 4-6th wherein people were dropping the convention of not "following back" people back and essentially following every person using the hashtag #nocomradeunder1k. 
+
+I decided to pull out the ```rtweet``` package to see how the trend was faring after a day:
+
+```{r, eval=FALSE}
+library(rtweet)
+
+comrade_df <- search_tweets("#NoComradesUnder1k",
+                            n = 100000, 
+                            retryonratelimit = T, 
+                            parse = T,
+                            include_rts = F)
+
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(rtweet)
+comrade_df <- readRDS(paste0(here::here(), "/content/post/comrade_df.rds"))
+```
+
+
+I had gained quite a few followers (250 in 5 hours vs 500 over multiple years on another account), and was wondering what that twitter network looked like, where people were using the hashtag, and whether or not I could automate a process to give my new followers a gift of their own network / friends (e.g. people who you follow that follow you back).
+
+The first thing I noticed was that the trend had started noticeably dying off the morning after I saw the trend, which I think is likely due to "follow limits" imposed by twitter which state you can only follow 400 users within a 24hr period.
+
+```{r, eval = FALSE}
+comrade_df %>%
+  ts_plot("3 hours") +
+  ggplot2::theme_minimal() +
+  ggplot2::theme(plot.title = ggplot2::element_text(face = "bold")) +
+  ggplot2::labs(
+    x = NULL, y = NULL,
+    title = "Frequency of #nocomradesunder1k use",
+    subtitle = "n = 45,734 tweets, not including RT, last update Aug. 6th 10AM",
+    caption = "\nSource: Data collected from Twitter's REST API via rtweet"
+  )
+```
+
+![](/img/comrade_timeline.png)
+
+I was wondering how I could draft up a network analysis, and the various igraph packages have always looked promising, but a bit complicated. So I took a simpler approach that Bob Rudis created:
+
+```{r, echo=TRUE, eval=FALSE}
+rt_g <- my_RTS %>% 
+  filter(retweet_count > 20) %>% 
+  select(screen_name, mentions_screen_name) %>% 
+  unnest(mentions_screen_name) %>% 
+  filter(!is.na(mentions_screen_name)) %>% 
+  graph_from_data_frame()
+
+V(rt_g)$node_label <- unname(ifelse(degree(rt_g)[V(rt_g)] > 80, names(V(rt_g)), "")) 
+V(rt_g)$node_size <- unname(ifelse(degree(rt_g)[V(rt_g)] > 60, degree(rt_g), 0))
+
+ggraph(rt_g, layout = 'linear', circular = TRUE) + 
+  geom_edge_arc(edge_width=0.125, aes(alpha=..index..)) +
+  geom_node_label(aes(label=node_label, size=node_size),
+                  label.size=0, fill="#ffffff66", segment.colour="green",
+                  color="slateblue", repel=T, fontface="bold") +
+  coord_fixed() +
+  scale_size_area(trans="sqrt") +
+  labs(title="Retweet Relationships", subtitle="Most retweeted screen names labeled. Darkers edges == more retweets. Node size == larger degree") +
+  theme_graph() +
+  theme(legend.position="none")
+
+```
+
+I can make a similar graph looking at connections between my RTs and people in my network's RTs, which is less interesting than what I wanted to do, which is to show full network connections. I'm afraid that may not be possible, or at least not quickly. For now, here is the RT graphic:
+
+
+![](/img/network.png)
+
