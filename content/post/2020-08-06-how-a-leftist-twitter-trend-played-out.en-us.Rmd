@@ -27,7 +27,6 @@ comrade_df <- search_tweets("#NoComradesUnder1k",
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 library(tidyverse)
 library(rtweet)
-comrade_df <- readRDS(paste0(here::here(), "/content/post/comrade_df.rds"))
 ```
 
 
